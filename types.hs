@@ -50,6 +50,10 @@ data Stage = Match Expression
 
 newtype AST = Pipeline [Stage]
 
+type Context = [(String, Map String BSONType)]
+
+nextStage :: Stage -> Context -> Context
+
 {--
   State monad with every field and its type
 
