@@ -1,4 +1,6 @@
-module Types () where
+module Types (BSONType (..), AST (..), Stage (..)) where
+
+import Data.Map (Map)
 
 type FieldPath = String
 
@@ -21,6 +23,7 @@ data BSONType
   | TNull
   | TIntgr
   | TDate
+  deriving (Eq, Show)
 
 data Op
   = Add
@@ -33,11 +36,11 @@ data Op
   | Eq
 
 data Accumulator
-  = Avg
+  = AAvg
   | First
   | Last
-  | Min
-  | Max
+  | AMin
+  | AMax
 
 data Expression
   = FP FieldPath
@@ -45,12 +48,12 @@ data Expression
   | Obj [(String, Expression)]
   | Application Op [Expression]
 
-data ProjectField = Inclusion Boolean | NewField Expression
+data ProjectField = Inclusion Bool | NewField Expression
 
 data Stage
   = Match Expression
   | Facet [(String, AST)]
-  | Lookup (String, FieldPath, FieldPath, String)
+  | Lookup String FieldPath FieldPath String
   | Project [(String, ProjectField)]
   | Unwind FieldPath
   | Group (Expression, [(String, Accumulator, Expression)])
@@ -59,7 +62,7 @@ newtype AST = Pipeline [Stage]
 
 type Context = [(String, Map String BSONType)]
 
-nextStage :: Stage -> Context -> Context
+-- nextStage :: Stage -> Context -> Context
 
 {--
   State monad with every field and its type
