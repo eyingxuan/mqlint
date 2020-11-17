@@ -1,32 +1,35 @@
 module Typechecker () where
 
 import qualified Data.Map.Internal as Map
-import Schema (accessPossibleTys)
+import Schema (accessPossibleTys, updateSchemaTy)
 import Types (AST, BSONType (..), SchemaTy (..), Stage (..))
 import Utils (withErr)
 
 type Context = [(String, SchemaTy)]
 
 processStage :: Context -> Stage -> SchemaTy -> Either String SchemaTy
-processStage _ (Unwind fp) sch = do
-  tys <- accessPossibleTys fp sch
-  Left "hello"
-
--- processStage :: Context -> Stage -> SchemaTy -> Either String SchemaTy
--- processStage _ (Unwind fp) sch = do
---   fty <- withErr (sch Map.!? fp) "Cannot find field"
---   case fty of
---     TArray aty -> return (Map.insert fp aty sch)
---     _ -> Left "Cannot unwind non-array type"
--- processStage ctx (Lookup foreignCol localFp foreignFp as) sch = do
---   foreignSch <- withErr (lookup foreignCol ctx) "No such foreign collection"
---   localTy <- withErr (sch Map.!? localFp) "Local collection does not have specified field"
---   foreignTy <- withErr (foreignSch Map.!? foreignFp) "Foreign collection does not have specified field"
---   if localTy /= foreignTy
---     then Left "Foreign field and local field type mismatch"
---     else
---       let objTy = TObject (Map.toList foreignSch)
---        in return $ Map.insert as objTy sch
+processStage _ (Unwind fp) sch =
+  updateSchemaTy
+    fp
+    ( \ty -> case ty of
+        TArray x -> Right x
+        _ -> Left "Cannot unwind non-array type"
+    )
+    sch
+processStage ctx (Lookup foreignCol localFp foreignFp as) sch = do
+  foreignSch <- withErr (lookup foreignCol ctx) "No such foreign collection"
+  localTys <- accessPossibleTys localFp sch
+  foreignTys <- accessPossibleTys foreignFp foreignSch
+  if length localTys == 1 && length foreignTys == 1
+    then case (localTys, foreignTys) of
+      ([lty], [fty]) ->
+        if lty == fty
+          then
+            let (S fsl, S lsl) = (foreignSch, sch)
+             in return (S [Map.insert as (TObject fm) lm | fm <- fsl, lm <- lsl])
+          else Left "Local and foreign lookup fields do not match"
+      _ -> Left "not possible"
+    else Left "Local and foreign lookup fields do not match"
 
 -- typecheck :: Context -> BSONType -> AST -> Either String BSONType
 -- typecheck ctx expTy ast = undefined

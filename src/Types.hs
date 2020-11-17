@@ -66,13 +66,11 @@ data Stage
   = Match Expression
   | Facet [(String, AST)]
   | Lookup String FieldPath FieldPath String
-  | Project [(String, ProjectField)]
+  | Project [(FieldPath, ProjectField)]
   | Unwind FieldPath
   | Group (Expression, [(String, Accumulator, Expression)])
 
 newtype AST = Pipeline [Stage]
-
-type Context = [(String, Map String BSONType)]
 
 -- nextStage :: Stage -> Context -> Context
 

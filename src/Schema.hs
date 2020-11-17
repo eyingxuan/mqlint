@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
-
 module Schema (accessPossibleTys, narrowDiscUnion, updateSchemaTy) where
 
 import Control.Monad (filterM, foldM, mapM)
