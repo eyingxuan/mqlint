@@ -1,10 +1,16 @@
 module Typechecker () where
 
 import qualified Data.Map.Internal as Map
-import Types (AST, BSONType (..), Stage (..))
+import Schema (accessPossibleTys)
+import Types (AST, BSONType (..), SchemaTy (..), Stage (..))
 import Utils (withErr)
 
--- type Context = [(String, SchemaTy)]
+type Context = [(String, SchemaTy)]
+
+processStage :: Context -> Stage -> SchemaTy -> Either String SchemaTy
+processStage _ (Unwind fp) sch = do
+  tys <- accessPossibleTys fp sch
+  Left "hello"
 
 -- processStage :: Context -> Stage -> SchemaTy -> Either String SchemaTy
 -- processStage _ (Unwind fp) sch = do

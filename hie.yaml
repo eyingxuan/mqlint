@@ -1,0 +1,13 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "mongo-linter:lib"
+
+    - path: "./app/Main.hs"
+      component: "mongo-linter:exe:mongo-linter-exe"
+
+    - path: "./app/Paths_mongo_linter.hs"
+      component: "mongo-linter:exe:mongo-linter-exe"
+
+    - path: "./test"
+      component: "mongo-linter:test:mongo-linter-test"
