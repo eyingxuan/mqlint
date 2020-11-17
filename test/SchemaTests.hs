@@ -1,9 +1,12 @@
-module SchemaTests () where
+module SchemaTests (schemaTests) where
 
 import qualified Data.Map.Internal as Map
 import Schema (accessPossibleTys)
-import Test.HUnit (Assertion, Test (..), assert, runTestTT, (~:), (~?=))
+import Test.HUnit (Test (..), (~:), (~?=))
 import Types (BSONType (..))
+
+schemaTests :: Test
+schemaTests = TestList [testDirectAccess, testNestedAccess, testBasicDiscriminationAccess]
 
 ty1 :: BSONType
 ty1 = TObject (Map.fromList [("x", TStr), ("y", TIntgr)])
@@ -37,7 +40,7 @@ d1 :: BSONType
 d1 = TObject (Map.fromList [("v", TConst "version1"), ("x", TIntgr), ("z", TIntgr)])
 
 d2 :: BSONType
-d2 = TObject (Map.fromList [("v", TConst "version2"), ("y", TDbl), ("z", TDate)])
+d2 = TObject (Map.fromList [("v", TConst "version2"), ("y", ty2), ("z", TDate)])
 
 ty4 :: BSONType
 ty4 = TSum [d1, d2]
@@ -60,10 +63,12 @@ testBasicDiscriminationAccess =
               \m -> case m Map.!? "v" of
                 Just v -> v == TConst "version2"
                 Nothing -> False
-            )
+            ),
+            ("x", const True),
+            ("x", const True)
           ]
           ty4
-          ~?= Right [TDbl],
+          ~?= Right [TStr],
         accessPossibleTys
           [ ( "z",
               const True

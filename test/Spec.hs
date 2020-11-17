@@ -1,2 +1,7 @@
+import SchemaTests (schemaTests)
+import Test.HUnit (Test (..), runTestTT)
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = do
+  _ <- runTestTT (TestList [schemaTests])
+  return ()
