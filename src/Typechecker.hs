@@ -1,17 +1,13 @@
 module Typechecker () where
 
 import qualified Data.Map as Map
+import Schema (SchemaTy (..))
 import Types (AST, BSONType (..), Stage (..))
+import Utils (withErr)
 
-type Schema = Map.Map String BSONType
+type Context = [(String, SchemaTy)]
 
-type Context = [(String, Schema)]
-
-withErr :: Maybe a -> String -> Either String a
-withErr (Just x) _ = Right x
-withErr Nothing msg = Left msg
-
-processStage :: Context -> Stage -> Schema -> Either String Schema
+processStage :: Context -> Stage -> SchemaTy -> Either String SchemaTy
 processStage _ (Unwind fp) sch = do
   fty <- withErr (sch Map.!? fp) "Cannot find field"
   case fty of

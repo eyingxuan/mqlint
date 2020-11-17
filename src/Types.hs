@@ -1,5 +1,6 @@
-module Types (BSONType (..), AST (..), Stage (..)) where
+module Types (BSON (..), BSONType (..), AST (..), Stage (..), FieldPath) where
 
+import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 
 type FieldPath = String
@@ -15,9 +16,11 @@ data BSON
   | Date Int
 
 data BSONType
-  = TDbl
+  = TSum (NonEmpty BSONType)
+  | TConst String
+  | TDbl
   | TStr
-  | TObject [(String, BSONType)]
+  | TObject (Map String BSONType)
   | TArray BSONType
   | TObjectId
   | TNull
