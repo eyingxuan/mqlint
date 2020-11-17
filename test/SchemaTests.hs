@@ -34,26 +34,41 @@ testNestedAccess =
       ]
 
 d1 :: BSONType
-d1 = TObject (Map.fromList [("v", TConst "version1"), ("x", TIntgr)])
+d1 = TObject (Map.fromList [("v", TConst "version1"), ("x", TIntgr), ("z", TIntgr)])
 
 d2 :: BSONType
-d2 = TObject (Map.fromList [("v", TConst "version2"), ("y", TDbl)])
+d2 = TObject (Map.fromList [("v", TConst "version2"), ("y", TDbl), ("z", TDate)])
 
 ty4 :: BSONType
 ty4 = TSum [d1, d2]
 
-testDiscriminationAccess :: Test
-testDiscriminationAccess =
-  "discrimination access schema"
+testBasicDiscriminationAccess :: Test
+testBasicDiscriminationAccess =
+  "basic discrimination access schema"
     ~: TestList
       [ accessPossibleTys
           [ ( "x",
-              ( \m -> case (m Map.!? "v") of
-                  Just v -> v == (TConst "version1")
-                  Nothing -> False
-              )
+              \m -> case m Map.!? "v" of
+                Just v -> v == TConst "version1"
+                Nothing -> False
             )
           ]
           ty4
-          ~?= Right [TIntgr]
+          ~?= Right [TIntgr],
+        accessPossibleTys
+          [ ( "y",
+              \m -> case m Map.!? "v" of
+                Just v -> v == TConst "version2"
+                Nothing -> False
+            )
+          ]
+          ty4
+          ~?= Right [TDbl],
+        accessPossibleTys
+          [ ( "z",
+              const True
+            )
+          ]
+          ty4
+          ~?= Right [TIntgr, TDate]
       ]
