@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5241a46941c48590f9c8ca6f355f090327cb50362639a6740f9f7c5a2799c5a5
+-- hash: c302913baf998ba5c9121b56b045149dde8628c2e854b3d68752f6bc7572a394
 
 name:           mongo-linter
 version:        0.1.0.0
@@ -30,7 +30,8 @@ library
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      HUnit
+    , base >=4.7 && <5
     , containers
   default-language: Haskell2010
 
@@ -42,7 +43,8 @@ executable mongo-linter-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      HUnit
+    , base >=4.7 && <5
     , containers
     , mongo-linter
   default-language: Haskell2010
@@ -51,12 +53,14 @@ test-suite mongo-linter-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      SchemaTests
       Paths_mongo_linter
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      HUnit
+    , base >=4.7 && <5
     , containers
     , mongo-linter
   default-language: Haskell2010

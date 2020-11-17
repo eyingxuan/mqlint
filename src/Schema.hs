@@ -1,7 +1,9 @@
-module Schema () where
+{-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
+
+module Schema (accessPossibleTys) where
 
 import Control.Monad (foldM)
-import Data.Map ((!?))
+import Data.Map (Map, (!?))
 import Types (BSONType (..), FieldPath)
 import Utils (withErr)
 
@@ -10,7 +12,7 @@ A schema must be defined on every collection used.
 Each schema is made up of an array of UnitSchemas
 -}
 
-type TypePredicate = BSONType -> Bool
+type TypePredicate = Map String BSONType -> Bool
 
 accessPossibleTys :: [(FieldPath, TypePredicate)] -> BSONType -> Either String [BSONType]
 accessPossibleTys [] ty = return [ty]
@@ -23,7 +25,9 @@ accessPossibleTys path (TSum blist) =
     []
     blist
 accessPossibleTys ((fp, tp) : tl) (TObject m) = do
-  fty <- withErr (m !? fp) "Field name not found in object"
-  if tp fty
-    then accessPossibleTys tl fty
+  if tp m
+    then do
+      fty <- withErr (m !? fp) "Field name not found in object"
+      accessPossibleTys tl fty
     else return []
+accessPossibleTys _ _ = Left "Tried to index into non object"
