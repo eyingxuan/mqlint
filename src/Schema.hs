@@ -7,19 +7,26 @@ import Data.Map (Map, insert, (!?))
 import Types (BSONType (..), FieldPath, Index (..), SchemaMap, SchemaTy (..))
 import Utils (withErr)
 
+toBsonType :: SchemaTy -> BSONType
+toBsonType (S l) = TSum $ map TObject l
+
+fromBsonType :: BSONType -> Either String SchemaTy
+fromBsonType bty = case bty of
+  TSum l -> do
+    sty <-
+      mapM
+        ( \ty -> case ty of
+            TObject m -> return m
+            _ -> Left "Conversion error"
+        )
+        l
+    return $ S sty
+  _ -> Left "Conversion error"
+
 updateSchemaTy :: FieldPath -> (BSONType -> Either String BSONType) -> SchemaTy -> Either String SchemaTy
-updateSchemaTy [] _ s = return s
-updateSchemaTy _ _ (S []) = Left "Schema is empty"
-updateSchemaTy (ArrayIndex : _) _ _ = Left "Cannot array index into schema"
-updateSchemaTy (ObjectIndex s : tl) trans (S l) =
-  S
-    <$> mapM
-      ( \m -> do
-          ty <- withErr (m !? s) "Field name not found in object"
-          transTy <- helper tl trans ty
-          return $ insert s transTy m
-      )
-      l
+updateSchemaTy fp trans sch = do
+  sty <- helper fp trans (toBsonType sch)
+  fromBsonType sty
   where
     helper :: FieldPath -> (BSONType -> Either String BSONType) -> BSONType -> Either String BSONType
     helper [] trans ty = trans ty
@@ -79,19 +86,9 @@ accessPossibleTys path (S l) = helper path (TSum (map TObject l))
     helper _ _ = Left "Tried to index into non object"
 
 narrowDiscUnion :: FieldPath -> (String -> Bool) -> SchemaTy -> Either String SchemaTy
-narrowDiscUnion fp pred (S l) = do
-  sty <- helper fp pred (TSum $ map TObject l)
-  case sty of
-    TSum l -> do
-      sty <-
-        mapM
-          ( \ty -> case ty of
-              TObject m -> return m
-              _ -> Left "Internal error"
-          )
-          l
-      return $ S sty
-    _ -> Left "Internal error"
+narrowDiscUnion fp pred sch = do
+  sty <- helper fp pred (toBsonType sch)
+  fromBsonType sty
   where
     helper :: FieldPath -> (String -> Bool) -> BSONType -> Either String BSONType
     helper [ObjectIndex s] pred (TSum tyl) =

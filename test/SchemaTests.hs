@@ -89,8 +89,8 @@ testUpdateTy =
           s5
           ~?= Right
             ( S
-                [ Map.fromList [("v", TConst "version1"), ("x", TIntgr)],
-                  Map.fromList [("v", TConst "version2"), ("x", TDate)]
+                [ Map.fromList [("v", TConst "version2"), ("x", TDate)],
+                  Map.fromList [("v", TConst "version1"), ("x", TIntgr)]
                 ]
             )
       ]
