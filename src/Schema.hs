@@ -3,12 +3,13 @@
 module Schema (accessPossibleTys, narrowDiscUnion, updateSchemaTy) where
 
 import Control.Monad (filterM, foldM, mapM)
-import Data.Map (Map, insert, (!?))
+import Data.Map.Internal (Map, insert, (!?))
+import qualified Data.Set as Set
 import Types (BSONType (..), FieldPath, Index (..), SchemaMap, SchemaTy (..))
 import Utils (withErr)
 
 toBsonType :: SchemaTy -> BSONType
-toBsonType (S l) = TSum $ map TObject l
+toBsonType (S l) = TSum $ Set.map TObject l
 
 fromBsonType :: BSONType -> Either String SchemaTy
 fromBsonType bty = case bty of
@@ -19,8 +20,8 @@ fromBsonType bty = case bty of
             TObject m -> return m
             _ -> Left "Conversion error"
         )
-        l
-    return $ S sty
+        (Set.toList l)
+    return $ S (Set.fromList sty)
   _ -> Left "Conversion error"
 
 updateSchemaTy :: FieldPath -> (BSONType -> Either String BSONType) -> SchemaTy -> Either String SchemaTy
@@ -34,7 +35,7 @@ updateSchemaTy fp trans sch = do
       newT <- helper tl trans ty
       return $ TArray newT
     helper fp@(ArrayIndex : _) trans (TSum tyl) =
-      TSum
+      TSum . Set.fromList
         <$> foldM
           ( \acc ty ->
               case ty of
@@ -51,7 +52,7 @@ updateSchemaTy fp trans sch = do
       transFty <- helper tl trans fty
       return $ TObject (insert s transFty m)
     helper fp@(ObjectIndex _ : _) trans (TSum tyl) =
-      TSum
+      TSum . Set.fromList
         <$> foldM
           ( \acc ty ->
               case ty of
@@ -66,8 +67,9 @@ updateSchemaTy fp trans sch = do
 
 accessPossibleTys :: FieldPath -> SchemaTy -> Either String [BSONType]
 accessPossibleTys [] _ = Left "No index provided"
-accessPossibleTys _ (S []) = Left "Schema is empty"
-accessPossibleTys path (S l) = helper path (TSum (map TObject l))
+accessPossibleTys path (S l)
+  | Set.size l == 0 = Left "Schema is empty"
+  | otherwise = helper path (TSum (Set.map TObject l))
   where
     helper :: FieldPath -> BSONType -> Either String [BSONType]
     helper [] ty = return [ty]
@@ -92,7 +94,7 @@ narrowDiscUnion fp pred sch = do
   where
     helper :: FieldPath -> (String -> Bool) -> BSONType -> Either String BSONType
     helper [ObjectIndex s] pred (TSum tyl) =
-      TSum
+      TSum . Set.fromList
         <$> foldM
           ( \acc ty -> case ty of
               TObject m -> do
@@ -107,12 +109,12 @@ narrowDiscUnion fp pred sch = do
     helper (ArrayIndex : tl) pred (TArray aty) = do
       newTy <- helper tl pred aty
       return $ TArray newTy
-    helper fp@(ArrayIndex : _) pred (TSum tyl) = TSum <$> mapM (helper fp pred) tyl
+    helper fp@(ArrayIndex : _) pred (TSum tyl) = TSum . Set.fromList <$> mapM (helper fp pred) (Set.toList tyl)
     helper (ArrayIndex : _) _ _ = Left "Cannot array index into non-array type"
     helper (ObjectIndex s : tl) pred (TObject m) = do
       fty <- withErr (m !? s) "Cannot find field"
       newFty <- helper tl pred fty
       return $ TObject (insert s newFty m)
-    helper fp@(ObjectIndex _ : _) pred (TSum tyl) = TSum <$> mapM (helper fp pred) tyl
+    helper fp@(ObjectIndex _ : _) pred (TSum tyl) = TSum . Set.fromList <$> mapM (helper fp pred) (Set.toList tyl)
     helper (ObjectIndex _ : _) _ _ = Left "Cannot object index into non-object type"
     helper [] _ ty = return ty

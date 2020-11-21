@@ -1,6 +1,7 @@
 module Types (BSON (..), BSONType (..), AST (..), Stage (..), FieldPath, SchemaTy (..), Index (..), SchemaMap) where
 
 import Data.Map.Internal (Map)
+import Data.Set (Set)
 
 data Index
   = ArrayIndex
@@ -20,11 +21,11 @@ data BSON
 
 type SchemaMap = Map String BSONType
 
-newtype SchemaTy = S [SchemaMap] deriving (Eq, Show)
+newtype SchemaTy = S (Set SchemaMap) deriving (Eq, Show)
 
 -- Should the Sum type be a set?
 data BSONType
-  = TSum [BSONType]
+  = TSum (Set BSONType)
   | TConst String
   | TBool
   | TDbl
@@ -35,7 +36,7 @@ data BSONType
   | TNull
   | TIntgr
   | TDate
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 data Op
   = Add

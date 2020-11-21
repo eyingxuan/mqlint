@@ -1,6 +1,7 @@
 module SchemaTests (schemaTests) where
 
 import qualified Data.Map.Internal as Map
+import qualified Data.Set as Set
 import Schema (accessPossibleTys, narrowDiscUnion, updateSchemaTy)
 import Test.HUnit (Test (..), (~:), (~?=))
 import Types (BSONType (..), Index (..), SchemaTy (..))
@@ -13,16 +14,16 @@ m1 :: Map.Map String BSONType
 m1 = Map.fromList [("x", TStr), ("y", TIntgr)]
 
 s1 :: SchemaTy
-s1 = S [m1]
+s1 = S (Set.fromList [m1])
 
 m2 :: Map.Map String BSONType
 m2 = Map.fromList [("x", TObject m1), ("z", TDate)]
 
 s2 :: SchemaTy
-s2 = S [m2]
+s2 = S (Set.fromList [m2])
 
 s3 :: SchemaTy
-s3 = S [Map.fromList [("x", TObject m2), ("y", TObject m1)]]
+s3 = S (Set.fromList [Map.fromList [("x", TObject m2), ("y", TObject m1)]])
 
 testDirectAccess :: Test
 testDirectAccess =
@@ -50,7 +51,7 @@ d2 :: Map.Map String BSONType
 d2 = Map.fromList [("v", TConst "version2"), ("y", TObject m2), ("z", TDate)]
 
 s4 :: SchemaTy
-s4 = S [d1, d2]
+s4 = S (Set.fromList [d1, d2])
 
 testSumTypeAccess :: Test
 testSumTypeAccess =
@@ -74,7 +75,7 @@ d4 :: Map.Map String BSONType
 d4 = Map.fromList [("v", TConst "version2"), ("x", TArray TDate)]
 
 s5 :: SchemaTy
-s5 = S [d3, d4]
+s5 = S (Set.fromList [d3, d4])
 
 testUpdateTy :: Test
 testUpdateTy =
@@ -89,9 +90,11 @@ testUpdateTy =
           s5
           ~?= Right
             ( S
-                [ Map.fromList [("v", TConst "version2"), ("x", TDate)],
-                  Map.fromList [("v", TConst "version1"), ("x", TIntgr)]
-                ]
+                ( Set.fromList
+                    [ Map.fromList [("v", TConst "version2"), ("x", TDate)],
+                      Map.fromList [("v", TConst "version1"), ("x", TIntgr)]
+                    ]
+                )
             )
       ]
 
@@ -102,14 +105,14 @@ d6 :: Map.Map String BSONType
 d6 = Map.fromList [("t", TConst "long"), ("x", TIntgr), ("y", TStr)]
 
 s6 :: SchemaTy
-s6 = S [Map.fromList [("person", TStr), ("addr", TSum [TObject d5, TObject d6])]]
+s6 = S (Set.fromList [Map.fromList [("person", TStr), ("addr", TSum (Set.fromList [TObject d5, TObject d6]))]])
 
 testTypeDiscrimination :: Test
 testTypeDiscrimination =
   "type discrimination schema"
     ~: TestList
       [ narrowDiscUnion [ObjectIndex "v"] (== "version1") s4
-          ~?= Right (S [d1]),
+          ~?= Right (S (Set.fromList [d1])),
         narrowDiscUnion [ObjectIndex "addr", ObjectIndex "t"] (== "long") s6
-          ~?= Right (S [Map.fromList [("person", TStr), ("addr", TSum [TObject d6])]])
+          ~?= Right (S (Set.fromList [Map.fromList [("person", TStr), ("addr", TSum (Set.fromList [TObject d6]))]]))
       ]

@@ -24,6 +24,8 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+    - -fwarn-incomplete-patterns
 
 executables:
   mongo-linter-exe:

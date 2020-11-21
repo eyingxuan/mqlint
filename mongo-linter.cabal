@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c302913baf998ba5c9121b56b045149dde8628c2e854b3d68752f6bc7572a394
+-- hash: 0562df216cab627c20d1e0819fa4cf1584032eeba4c96c3485f79ca71315877c
 
 name:           mongo-linter
 version:        0.1.0.0
@@ -29,6 +29,7 @@ library
       Paths_mongo_linter
   hs-source-dirs:
       src
+  ghc-options: -fwarn-incomplete-patterns
   build-depends:
       HUnit
     , base >=4.7 && <5
