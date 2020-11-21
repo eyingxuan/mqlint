@@ -71,10 +71,3 @@ data Stage
   | Group (Expression, [(String, Accumulator, Expression)])
 
 newtype AST = Pipeline [Stage]
-
--- nextStage :: Stage -> Context -> Context
-
-{--
-  State monad with every field and its type
-
---}

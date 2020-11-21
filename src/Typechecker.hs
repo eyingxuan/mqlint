@@ -23,6 +23,8 @@ processStage ctx (Lookup foreignCol localFp foreignFp as) sch = do
   if length localTys == 1 && length foreignTys == 1
     then case (localTys, foreignTys) of
       ([lty], [fty]) ->
+        -- TODO: Use subtyping here instead of eq - For ex. TConst "hello" fits with TStr
+        -- Consider warning instead?
         if lty == fty
           then
             let (S fsl, S lsl) = (foreignSch, sch)

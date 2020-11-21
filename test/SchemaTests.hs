@@ -67,19 +67,6 @@ testSumTypeAccess =
           ~?= Left "Field name not found in object"
       ]
 
-testTypeDiscrimination :: Test
-testTypeDiscrimination =
-  "type discrimination schema"
-    ~: TestList
-      [ narrowDiscUnion
-          ( \m -> do
-              ty <- withErr (m Map.!? "v") "Field name not found in object"
-              return $ ty == TConst "version1"
-          )
-          s4
-          ~?= Right (S [d1])
-      ]
-
 d3 :: Map.Map String BSONType
 d3 = Map.fromList [("v", TConst "version1"), ("x", TArray TIntgr)]
 
@@ -106,4 +93,23 @@ testUpdateTy =
                   Map.fromList [("v", TConst "version2"), ("x", TDate)]
                 ]
             )
+      ]
+
+d5 :: Map.Map String BSONType
+d5 = Map.fromList [("t", TConst "short"), ("x", TStr)]
+
+d6 :: Map.Map String BSONType
+d6 = Map.fromList [("t", TConst "long"), ("x", TIntgr), ("y", TStr)]
+
+s6 :: SchemaTy
+s6 = S [Map.fromList [("person", TStr), ("addr", TSum [TObject d5, TObject d6])]]
+
+testTypeDiscrimination :: Test
+testTypeDiscrimination =
+  "type discrimination schema"
+    ~: TestList
+      [ narrowDiscUnion [ObjectIndex "v"] (== "version1") s4
+          ~?= Right (S [d1]),
+        narrowDiscUnion [ObjectIndex "addr", ObjectIndex "t"] (== "long") s6
+          ~?= Right (S [Map.fromList [("person", TStr), ("addr", TSum [TObject d6])]])
       ]
