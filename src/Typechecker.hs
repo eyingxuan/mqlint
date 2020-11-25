@@ -8,6 +8,7 @@ import Utils (withErr)
 
 type Context = [(String, SchemaTy)]
 
+-- isSubtype t1 t2 checks if t1 <: t2
 isSubtype :: BSONType -> BSONType -> Bool
 isSubtype (TConst _) TStr = True
 isSubtype (TArray ty1) (TArray ty2) = isSubtype ty1 ty2
@@ -53,6 +54,7 @@ processStage ctx (Lookup foreignCol localFp foreignFp as) sch = do
           else Left "Local and foreign lookup fields do not match"
       _ -> Left "not possible"
     else Left "Local and foreign lookup fields do not match"
+processStage _ _ _ = undefined
 
 -- typecheck :: Context -> BSONType -> AST -> Either String BSONType
 -- typecheck ctx expTy ast = undefined

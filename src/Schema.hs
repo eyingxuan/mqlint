@@ -1,9 +1,7 @@
-{-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
-
 module Schema (accessPossibleTys, narrowDiscUnion, updateSchemaTy) where
 
 import Control.Monad (filterM, foldM, mapM)
-import Data.Map.Internal (Map, insert, (!?))
+import Data.Map.Internal (Map, delete, insert, (!?))
 import qualified Data.Set as Set
 import Types (BSONType (..), FieldPath, Index (..), SchemaMap, SchemaTy (..))
 import Utils (withErr)
@@ -65,6 +63,21 @@ updateSchemaTy fp trans sch = do
           tyl
     helper ((ObjectIndex _) : _) _ _ = Left "Cannot object index into non-object type"
 
+removeSchemaPath :: FieldPath -> SchemaTy -> Either String SchemaTy
+removeSchemaPath fp sch = do
+  sty <- helper fp (toBsonType sch)
+  fromBsonType sty
+  where
+    helper :: FieldPath -> BSONType -> Either String BSONType
+    helper [] _ = Left "Cannot remove with empty field path"
+    helper [ObjectIndex s] (TObject m) = return (TObject $ delete s m)
+    helper (ObjectIndex s : tl) (TObject m) = case m !? s of
+      Just fty -> do
+        transTy <- helper tl fty
+        return (TObject $ insert s transTy m)
+      Nothing -> return $ TObject m
+    helper _ _ = Left "Cannot index object"
+
 accessPossibleTys :: FieldPath -> SchemaTy -> Either String [BSONType]
 accessPossibleTys [] _ = Left "No index provided"
 accessPossibleTys path (S l)
@@ -101,7 +114,7 @@ narrowDiscUnion fp pred sch = do
                 fty <- withErr (m !? s) "Cannot find field"
                 case fty of
                   TConst s' -> if pred s' then return $ ty : acc else return acc
-                  _ -> return acc
+                  _ -> return (ty : acc)
               _ -> Left "Cannot object index sum type with non-object types"
           )
           []

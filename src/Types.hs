@@ -1,4 +1,4 @@
-module Types (BSON (..), BSONType (..), AST (..), Stage (..), FieldPath, SchemaTy (..), Index (..), SchemaMap) where
+module Types (BSON (..), BSONType (..), AST (..), Stage (..), FieldPath, SchemaTy (..), Index (..), SchemaMap, ProjectField (..), Accumulator (..), Expression (..), Op (..)) where
 
 import Data.Map.Internal (Map)
 import Data.Set (Set)
@@ -18,6 +18,7 @@ data BSON
   | Null
   | Intgr Int
   | Date Int
+  deriving (Eq, Show)
 
 type SchemaMap = Map String BSONType
 
