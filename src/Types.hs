@@ -12,12 +12,13 @@ type FieldPath = [Index]
 data BSON
   = Dbl Double
   | Str String
-  | Object [(String, BSON)]
+  | Object (Map String BSON)
   | Array [BSON]
   | ObjectId String
   | Null
   | Intgr Int
   | Date Int
+  | Boolean Bool
   deriving (Eq, Show)
 
 type SchemaMap = Map String BSONType
