@@ -67,10 +67,10 @@ data ProjectField = Inclusion Bool | NewField Expression
 
 data Stage
   = Match Expression
-  | Facet [(String, AST)]
-  | Lookup String FieldPath FieldPath String
-  | Project [(FieldPath, ProjectField)]
   | Unwind FieldPath
-  | Group (Expression, [(String, Accumulator, Expression)])
+  | Lookup String FieldPath FieldPath String
+  | Group Expression [(String, Accumulator, Expression)]
+  | Facet (Map String AST)
+  | Project (Map String ProjectField)
 
 newtype AST = Pipeline [Stage]
