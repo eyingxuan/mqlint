@@ -1,6 +1,6 @@
 module Parser where
 import Text.ParserCombinators.Parsec
-import Types (AST (..), Accumulator (..), BSON (..), Expression (..), Op (..), ProjectField (..), Stage (..), FieldPath (..), Index (..))
+import Types (AST (..), Accumulator (..), BSON (..), Expression (..), Op (..), Stage (..), FieldPath (..), Index (..))
 import Control.Applicative ((<$>), (<*>), (<*), (*>), (<$), empty)
 
 import Data.Map (Map)
@@ -17,10 +17,47 @@ indexP = try (many1 digit) *> pure ArrayIndex
 fieldPathP :: Parser FieldPath
 fieldPathP = char '$' *> indexP `sepBy` char '.'
 
-makeExpression :: JSON -> TransformResult Expression
-makeExpression (JObject o) = undefined
-makeExpression _ = Left ""
+makeLiteral :: JSON -> BSON
+makeLiteral (JBool b) = Boolean b
+makeLiteral (JNumber n) = Dbl n
+makeLiteral (JStr s) = Str s
+makeLiteral JNull = Null
+makeLiteral (JObject o) = Object $ makeLiteral <$> o
+makeLiteral (JArray arr) = Array $ makeLiteral <$> arr
 
+-- TODO: Add more operators!
+operatorOf :: String -> Maybe Op
+operatorOf "$add" = Just Add
+operatorOf "$abs" = Just Abs
+operatorOf "$ceil" = Just Ceil
+operatorOf "$floor" = Just Floor
+operatorOf "$avg" = Just Avg
+operatorOf _ = Nothing
+
+
+singleton :: a -> [a]
+singleton x = [x]
+
+makeExpression :: JSON -> TransformResult Expression
+makeExpression (JBool b) = return $ Inclusion b
+makeExpression (JNumber 0.0) = return $ Inclusion False
+makeExpression (JNumber _) = return $ Inclusion True
+makeExpression (JStr s) = case parse fieldPathP "" s of
+  Left _ -> return $ Lit (Str s)
+  Right fp -> return $ FP fp
+makeExpression JNull = return $ Lit Null
+makeExpression (JArray arr) = EArray <$> mapM makeExpression arr
+makeExpression (JObject o) = case Map.toList o of
+  [("$literal", v)] -> return $ Lit $ makeLiteral v
+  [(f, v)] -> case operatorOf f of
+    Just op -> Application op <$> case v of
+      (JArray arr) -> mapM makeExpression arr
+      _ -> singleton <$> makeExpression v
+    Nothing -> EObject <$> mapM makeExpression o
+  -- Operator expressions have exactly one key, otherwise this is an object.
+  _ -> EObject <$> mapM makeExpression o 
+  
+  
 parseStage :: [(String, JSON -> TransformResult Stage)] -> JSON -> TransformResult Stage
 parseStage m (JObject o) = case Map.toList o of
   [(k, v)] -> case Map.lookup k (Map.fromList m) of
@@ -42,8 +79,8 @@ getFieldPath (JStr s) = case parse fieldPathP "" s of
   Right x -> Right x
 getFieldPath _ = Left "Fieldpath must be a JSON string."
 
-accFromString :: String -> Either String Accumulator
-accFromString a = case a of
+accumulatorOf :: String -> Either String Accumulator
+accumulatorOf a = case a of
   "$avg" -> Right AAvg
   "$first" -> Right First
   "$last" -> Right Last
@@ -51,9 +88,9 @@ accFromString a = case a of
   "$max" -> Right AMax
   _ -> Left "unknown accumulator."
 
-getAccumulation :: (String, JSON) -> Either String (String, Accumulator, Expression)
-getAccumulation (k, (JObject o)) = case Map.toList o of
-  [(acc, exp)] -> (,,) <$> pure k <*> accFromString acc <*> makeExpression exp
+getAccumulation :: (String, JSON) -> TransformResult (String, Accumulator, Expression)
+getAccumulation (k, JObject o) = case Map.toList o of
+  [(acc, exp)] -> (,,) <$> pure k <*> accumulatorOf acc <*> makeExpression exp
   _ -> Left "Exactly one accumulator per field."
 
 getAccumulation _ = Left "Accumulator inside $group must be an object."
@@ -69,17 +106,9 @@ makeStage = parseStage [
                                         <*> getStringValue "as" o))
     , ("$group", withObj (\o -> Group <$> (getValue "_id" o >>= makeExpression)
                                       <*> mapM getAccumulation (Map.toList (Map.delete "_id" o))))
-    , ("$facet", withObj (\o -> Facet <$> mapM makePipeline o))
+    , ("$facet", withObj (fmap Facet . mapM makePipeline))
     -- This only supports "a.b.c" fields, not nested projections.
-    , ("$project", withObj (\o -> Project <$> mapM (
-          \j -> case j of 
-            exp@(JObject _) -> NewField <$> makeExpression exp
-            exp@(JArray _) -> NewField <$> makeExpression exp
-            (JNumber 1.0) -> Right $ Inclusion True
-            (JNumber 0.0) -> Right $ Inclusion False
-            _ -> Left "Unknown projection."
-        ) o
-      ))
+    , ("$project", withObj (fmap Project . mapM makeExpression))
   ]
   where
     withObj f (JObject o) = f o

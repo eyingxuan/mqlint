@@ -1,4 +1,4 @@
-module Types (BSON (..), BSONType (..), AST (..), Stage (..), FieldPath, SchemaTy (..), Index (..), SchemaMap, ProjectField (..), Accumulator (..), Expression (..), Op (..)) where
+module Types (BSON (..), BSONType (..), AST (..), Stage (..), FieldPath, SchemaTy (..), Index (..), SchemaMap, Accumulator (..), Expression (..), Op (..)) where
 
 import Data.Map.Internal (Map)
 import Data.Set (Set)
@@ -59,11 +59,13 @@ data Accumulator
 
 data Expression
   = FP FieldPath
+  | Inclusion Bool
   | Lit BSON
-  | Obj [(String, Expression)]
+  | EObject (Map String Expression)
+  | EArray [Expression]
   | Application Op [Expression]
 
-data ProjectField = Inclusion Bool | NewField Expression
+-- data ProjectField = Inclusion Bool | NewField Expression
 
 data Stage
   = Match Expression
@@ -71,6 +73,6 @@ data Stage
   | Lookup String FieldPath FieldPath String
   | Group Expression [(String, Accumulator, Expression)]
   | Facet (Map String AST)
-  | Project (Map String ProjectField)
+  | Project (Map String Expression)
 
 newtype AST = Pipeline [Stage]
