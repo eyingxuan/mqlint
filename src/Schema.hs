@@ -90,7 +90,7 @@ insertSchemaPath fp newTy sch = do
     helper [] _ _ = Left "Cannot insert with empty field path"
     helper [ObjectIndex s] newTy (TObject m) = case m !? s of
       Just _ -> Left "Type already exists at field path"
-      Nothing -> return (TObject $ insert s newTy sch)
+      Nothing -> return (TObject $ insert s newTy m)
     helper (ObjectIndex s : tl) newTy (TObject m) = case m !? s of
       Just fty -> do
         transTy <- helper tl newTy fty
