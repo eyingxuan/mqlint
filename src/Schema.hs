@@ -1,7 +1,7 @@
-module Schema (accessPossibleTys, narrowDiscUnion, updateSchemaTy) where
+module Schema (accessPossibleTys, narrowDiscUnion, updateSchemaTy, insertSchemaPath, removeSchemaPath) where
 
 import Control.Monad (filterM, foldM, mapM)
-import Data.Map.Internal (Map, delete, insert, (!?))
+import Data.Map.Internal (Map, delete, empty, insert, (!?))
 import qualified Data.Set as Set
 import Types (BSONType (..), FieldPath, Index (..), SchemaMap, SchemaTy (..))
 import Utils (withErr)
@@ -77,6 +77,28 @@ removeSchemaPath fp sch = do
         return (TObject $ insert s transTy m)
       Nothing -> return $ TObject m
     helper _ _ = Left "Cannot index object"
+
+-- insertion errors if the type already exists on an object
+-- mongo does not allow overlapping projections anyways
+-- however, this does limit the use of this function
+insertSchemaPath :: FieldPath -> BSONType -> SchemaTy -> Either String SchemaTy
+insertSchemaPath fp newTy sch = do
+  sty <- helper fp newTy (toBsonType sch)
+  fromBsonType sty
+  where
+    helper :: FieldPath -> BSONType -> BSONType -> Either String BSONType
+    helper [] _ _ = Left "Cannot insert with empty field path"
+    helper [ObjectIndex s] newTy (TObject m) = case m !? s of
+      Just _ -> Left "Type already exists at field path"
+      Nothing -> return (TObject $ insert s newTy sch)
+    helper (ObjectIndex s : tl) newTy (TObject m) = case m !? s of
+      Just fty -> do
+        transTy <- helper tl newTy fty
+        return (TObject $ insert s transTy m)
+      Nothing -> do
+        transTy <- helper tl newTy (TObject empty)
+        return (TObject $ insert s transTy m)
+    helper _ _ _ = Left "Cannot index object"
 
 accessPossibleTys :: FieldPath -> SchemaTy -> Either String [BSONType]
 accessPossibleTys [] _ = Left "No index provided"
