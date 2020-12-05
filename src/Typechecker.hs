@@ -3,10 +3,8 @@ module Typechecker () where
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Schema (accessPossibleTys, updateSchemaTy)
-import Types (AST, BSONType (..), SchemaTy (..), Stage (..))
+import Types (BSONType (..), Context, SchemaTy (..), Stage (..))
 import Utils (withErr)
-
-type Context = [(String, SchemaTy)]
 
 -- isSubtype t1 t2 checks if t1 <: t2
 isSubtype :: BSONType -> BSONType -> Bool
@@ -41,7 +39,7 @@ processStage _ (Unwind fp) sch =
     )
     sch
 processStage ctx (Lookup foreignCol localFp foreignFp as) sch = do
-  foreignSch <- withErr (lookup foreignCol ctx) "No such foreign collection"
+  foreignSch <- withErr (ctx Map.!? foreignCol) "No such foreign collection"
   localTys <- accessPossibleTys localFp sch
   foreignTys <- accessPossibleTys foreignFp foreignSch
   if length localTys == 1 && length foreignTys == 1

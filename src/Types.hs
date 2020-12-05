@@ -1,11 +1,14 @@
-module Types (BSON (..), BSONType (..), AST (..), Stage (..), FieldPath, SchemaTy (..), Index (..), SchemaMap, Accumulator (..), Expression (..), Op (..)) where
+module Types (Context, BSON (..), BSONType (..), AST (..), Stage (..), FieldPath, SchemaTy (..), Index (..), SchemaMap, Accumulator (..), Expression (..), Op (..)) where
 
 import Data.Map.Internal (Map)
 import Data.Set (Set)
 
+type Context = Map String SchemaTy
+
 data Index
   = ArrayIndex
   | ObjectIndex String
+  deriving (Eq, Ord, Show)
 
 type FieldPath = [Index]
 
@@ -19,7 +22,7 @@ data BSON
   | Intgr Int
   | Date Int
   | Boolean Bool
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 type SchemaMap = Map String BSONType
 
@@ -49,6 +52,7 @@ data Op
   | Min
   | Max
   | Eq
+  deriving (Eq, Ord, Show)
 
 data Accumulator
   = AAvg
@@ -56,6 +60,7 @@ data Accumulator
   | Last
   | AMin
   | AMax
+  deriving (Eq, Ord, Show)
 
 data Expression
   = FP FieldPath
@@ -64,6 +69,7 @@ data Expression
   | EObject (Map String Expression)
   | EArray [Expression]
   | Application Op [Expression]
+  deriving (Eq, Ord, Show)
 
 -- data ProjectField = Inclusion Bool | NewField Expression
 
@@ -74,5 +80,7 @@ data Stage
   | Group Expression [(String, Accumulator, Expression)]
   | Facet (Map String AST)
   | Project (Map String Expression)
+  deriving (Eq, Ord, Show)
 
 newtype AST = Pipeline [Stage]
+  deriving (Eq, Ord, Show)

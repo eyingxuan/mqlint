@@ -1,17 +1,16 @@
-module MqlParser where
-
-import Text.ParserCombinators.Parsec
+module MqlParser (getPipelineFromFile) where
 
 import qualified Data.Map as Map
-import Data.Map (Map)
-
-import ParserCommon (JSON (..), TransformResult, getValue, getStringValue)
-import Types (BSON (..), FieldPath (..), Expression (..), Index (..), Op (..), Stage (..), Accumulator (..), AST (..))
+import JsonParser (parseJson)
+import ParserCommon (JSON (..), TransformResult, getStringValue, getValue)
+import Text.ParserCombinators.Parsec
+import Types (AST (..), Accumulator (..), BSON (..), Expression (..), FieldPath (..), Index (..), Op (..), Stage (..))
 
 indexP :: Parser Index
-indexP = try (many1 digit) *> pure ArrayIndex
-         <|> try (ObjectIndex <$> many1 (noneOf "\t\n."))
-         <?> "Index must be alphanumeric."
+indexP =
+  try (many1 digit) *> pure ArrayIndex
+    <|> try (ObjectIndex <$> many1 (noneOf "\t\n."))
+    <?> "Index must be alphanumeric."
 
 fieldPathP :: Parser FieldPath
 fieldPathP = char '$' *> indexP `sepBy` char '.'
@@ -33,7 +32,6 @@ operatorOf "$floor" = Just Floor
 operatorOf "$avg" = Just Avg
 operatorOf _ = Nothing
 
-
 singleton :: a -> [a]
 singleton x = [x]
 
@@ -52,13 +50,13 @@ makeExpression (JArray arr) = EArray <$> mapM makeExpression arr
 makeExpression (JObject o) = case Map.toList o of
   [("$literal", v)] -> return $ Lit $ makeLiteral v
   [(f, v)] -> case operatorOf f of
-    Just op -> Application op <$> case v of
-      (JArray arr) -> mapM makeExpression arr
-      _ -> singleton <$> makeExpression v
+    Just op ->
+      Application op <$> case v of
+        (JArray arr) -> mapM makeExpression arr
+        _ -> singleton <$> makeExpression v
     Nothing -> EObject <$> mapM makeExpression o
-  _ -> EObject <$> mapM makeExpression o 
-  
-  
+  _ -> EObject <$> mapM makeExpression o
+
 parseStage :: [(String, JSON -> TransformResult Stage)] -> JSON -> TransformResult Stage
 parseStage m (JObject o) = case Map.toList o of
   [(k, v)] -> case Map.lookup k (Map.fromList m) of
@@ -66,8 +64,6 @@ parseStage m (JObject o) = case Map.toList o of
     Nothing -> Left "unrecognized stage."
   _ -> Left "Stage must only have one key."
 parseStage _ _ = Left "Stage must be an object."
-
-
 
 getFieldPath (JStr s) = case parse fieldPathP "" s of
   Left _ -> Left "error parsing fieldpath"
@@ -87,24 +83,33 @@ getAccumulation :: (String, JSON) -> TransformResult (String, Accumulator, Expre
 getAccumulation (k, JObject o) = case Map.toList o of
   [(acc, exp)] -> (,,) <$> pure k <*> accumulatorOf acc <*> makeExpression exp
   _ -> Left "Exactly one accumulator per field."
-
 getAccumulation _ = Left "Accumulator inside $group must be an object."
 
-
 makeStage :: JSON -> TransformResult Stage
-makeStage = parseStage [
-      ("$match", fmap Match . makeExpression)
-    , ("$unwind", fmap Unwind . getFieldPath)
-    , ("$lookup", withObj (\o -> Lookup <$> getStringValue "from" o
-                                        <*> (getValue "localField" o >>= getFieldPath)
-                                        <*> (getValue "foreignField" o >>= getFieldPath)
-                                        <*> getStringValue "as" o))
-    , ("$group", withObj (\o -> Group <$> (getValue "_id" o >>= makeExpression)
-                                      <*> mapM getAccumulation (Map.toList (Map.delete "_id" o))))
-    , ("$facet", withObj (fmap Facet . mapM makePipeline))
-    -- This only supports "a.b.c" fields, not nested projections.
-    , ("$project", withObj (fmap Project . mapM makeExpression))
-  ]
+makeStage =
+  parseStage
+    [ ("$match", fmap Match . makeExpression),
+      ("$unwind", fmap Unwind . getFieldPath),
+      ( "$lookup",
+        withObj
+          ( \o ->
+              Lookup <$> getStringValue "from" o
+                <*> (getValue "localField" o >>= getFieldPath)
+                <*> (getValue "foreignField" o >>= getFieldPath)
+                <*> getStringValue "as" o
+          )
+      ),
+      ( "$group",
+        withObj
+          ( \o ->
+              Group <$> (getValue "_id" o >>= makeExpression)
+                <*> mapM getAccumulation (Map.toList (Map.delete "_id" o))
+          )
+      ),
+      ("$facet", withObj (fmap Facet . mapM makePipeline)),
+      -- This only supports "a.b.c" fields, not nested projections.
+      ("$project", withObj (fmap Project . mapM makeExpression))
+    ]
   where
     withObj f (JObject o) = f o
     withObj _ _ = Left "Expecting object."
@@ -115,9 +120,15 @@ makePipeline (JArray l) = do
   return (Pipeline v)
   where
     helper [] = return []
-    helper (s : ss) = do 
+    helper (s : ss) = do
       h <- makeStage s
       t <- helper ss
       return (h : t)
-
 makePipeline _ = Left "Pipeline must be array of stages."
+
+getPipelineFromFile :: String -> IO (TransformResult AST)
+getPipelineFromFile filename = do
+  contents <- readFile filename
+  case parseJson contents of
+    Right json -> return $ makePipeline json
+    Left s -> return $ Left (show s)

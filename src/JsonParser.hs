@@ -1,21 +1,22 @@
-module JsonParser where
+module JsonParser (parseJson) where
 
-import Numeric (readSigned, readFloat)
 import Control.Applicative (empty)
-
 import Data.Map (Map)
 import qualified Data.Map as Map
-
+import Numeric (readFloat, readSigned)
+import ParserCommon (JSON (..))
 import Text.ParserCombinators.Parsec
 
-import ParserCommon (JSON (..))
-
+parseJson :: String -> Either ParseError JSON
+parseJson = parse jTopP ""
 
 jTopP :: Parser JSON
-jTopP = whitespace *>
-        (JObject <$> jObjP 
-        <|> JArray <$> jArrP
-        <?> "Top-level must be object or array.")
+jTopP =
+  whitespace
+    *> ( JObject <$> jObjP
+           <|> JArray <$> jArrP
+           <?> "Top-level must be object or array."
+       )
 
 jArrP :: Parser [JSON]
 jArrP = lexeme (char '[') *> jValP `sepBy` lexeme (char ',') <* lexeme (char ']')
@@ -29,14 +30,15 @@ jPairP = (,) <$> lexeme stringV <*> (lexeme (char ':') *> lexeme jValP)
 constP :: String -> a -> Parser a
 constP s x = string s *> pure x
 
-jValP :: Parser JSON 
-jValP = JStr <$> stringV
-        <|> JNumber <$> numberV
-        <|> JBool <$> (constP "true" True <|> constP "false" False)
-        <|> constP "null" JNull
-        <|> JObject <$> jObjP
-        <|> JArray <$> jArrP
-        <?> "JSON value"
+jValP :: Parser JSON
+jValP =
+  JStr <$> stringV
+    <|> JNumber <$> numberV
+    <|> JBool <$> (constP "true" True <|> constP "false" False)
+    <|> constP "null" JNull
+    <|> JObject <$> jObjP
+    <|> JArray <$> jArrP
+    <?> "JSON value"
 
 whitespace :: Parser ()
 whitespace = many (oneOf " \n\t") *> pure ()
@@ -48,7 +50,8 @@ stringV :: Parser String
 stringV = char '\"' *> many (noneOf "\"") <* char '\"'
 
 numberV :: Parser Double
-numberV = do s <- getInput
-             case readSigned readFloat s of
-                [(n, s')] -> n <$ setInput s'
-                _         -> empty
+numberV = do
+  s <- getInput
+  case readSigned readFloat s of
+    [(n, s')] -> n <$ setInput s'
+    _ -> empty
