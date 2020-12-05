@@ -1,10 +1,16 @@
-module Typechecker () where
+-- TODO: Change to not export processStage
+module Typechecker (processStage) where
 
+import Control.Monad.Except (ExceptT, MonadError (throwError))
+import Control.Monad.Identity (Identity)
+import Control.Monad.Reader (MonadReader (ask), ReaderT, lift)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Schema (accessPossibleTys, updateSchemaTy)
 import Types (BSONType (..), Context, SchemaTy (..), Stage (..))
 import Utils (withErr)
+
+type TypecheckResult = ReaderT Context (ExceptT String Identity)
 
 -- isSubtype t1 t2 checks if t1 <: t2
 isSubtype :: BSONType -> BSONType -> Bool
@@ -29,19 +35,21 @@ isSubtype t1 t2
   | t1 == t2 = True
   | otherwise = False
 
-processStage :: Context -> Stage -> SchemaTy -> Either String SchemaTy
-processStage _ (Unwind fp) sch =
-  updateSchemaTy
-    fp
-    ( \ty -> case ty of
-        TArray x -> Right x
-        _ -> Left "Cannot unwind non-array type"
-    )
-    sch
-processStage ctx (Lookup foreignCol localFp foreignFp as) sch = do
-  foreignSch <- withErr (ctx Map.!? foreignCol) "No such foreign collection"
-  localTys <- accessPossibleTys localFp sch
-  foreignTys <- accessPossibleTys foreignFp foreignSch
+processStage :: Stage -> SchemaTy -> TypecheckResult SchemaTy
+processStage (Unwind fp) sch =
+  lift $
+    updateSchemaTy
+      fp
+      ( \ty -> case ty of
+          TArray x -> return x
+          _ -> throwError "Cannot unwind non-array type"
+      )
+      sch
+processStage (Lookup foreignCol localFp foreignFp as) sch = do
+  ctx <- ask
+  foreignSch <- lift $ withErr (ctx Map.!? foreignCol) "No such foreign collection"
+  localTys <- lift $ accessPossibleTys localFp sch
+  foreignTys <- lift $ accessPossibleTys foreignFp foreignSch
   if length localTys == 1 && length foreignTys == 1
     then case (localTys, foreignTys) of
       ([lty], [fty]) ->
@@ -49,10 +57,10 @@ processStage ctx (Lookup foreignCol localFp foreignFp as) sch = do
           then
             let (S fsl, S lsl) = (foreignSch, sch)
              in return (S (Set.fromList [Map.insert as (TObject fm) lm | fm <- Set.toList fsl, lm <- Set.toList lsl]))
-          else Left "Local and foreign lookup fields do not match"
-      _ -> Left "not possible"
-    else Left "Local and foreign lookup fields do not match"
-processStage _ _ _ = undefined
+          else throwError "Local and foreign lookup fields do not match"
+      _ -> throwError "not possible"
+    else throwError "Local and foreign lookup fields do not match"
+processStage _ _ = undefined
 
 -- typecheck :: Context -> BSONType -> AST -> Either String BSONType
 -- typecheck ctx expTy ast = undefined

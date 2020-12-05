@@ -22,6 +22,7 @@ dependencies:
   - containers
   - HUnit
   - parsec
+  - mtl
 
 library:
   source-dirs: src

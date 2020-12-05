@@ -1,9 +1,27 @@
-module Types (Context, BSON (..), BSONType (..), AST (..), Stage (..), FieldPath, SchemaTy (..), Index (..), SchemaMap, Accumulator (..), Expression (..), Op (..)) where
+module Types
+  ( Context,
+    BSON (..),
+    BSONType (..),
+    AST (..),
+    Stage (..),
+    FieldPath,
+    SchemaTy (..),
+    Index (..),
+    SchemaMap,
+    Accumulator (..),
+    Expression (..),
+    Op (..),
+    Exception,
+  )
+where
 
+import Control.Monad.Except (ExceptT)
+import Control.Monad.Identity (Identity)
 import Data.Map.Internal (Map)
 import Data.Set (Set)
 
 type Context = Map String SchemaTy
+type Exception = ExceptT String Identity
 
 data Index
   = ArrayIndex
