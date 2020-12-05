@@ -21,6 +21,7 @@ import Data.Map.Internal (Map)
 import Data.Set (Set)
 
 type Context = Map String SchemaTy
+
 type Exception = ExceptT String Identity
 
 data Index
@@ -31,13 +32,12 @@ data Index
 type FieldPath = [Index]
 
 data BSON
-  = Dbl Double
+  = Number Double
   | Str String
   | Object (Map String BSON)
   | Array [BSON]
   | ObjectId String
   | Null
-  | Intgr Int
   | Date Int
   | Boolean Bool
   deriving (Eq, Ord, Show)
@@ -51,13 +51,12 @@ data BSONType
   = TSum (Set BSONType)
   | TConst String
   | TBool
-  | TDbl
+  | TNumber
   | TStr
   | TObject (Map String BSONType)
   | TArray BSONType
   | TObjectId
   | TNull
-  | TIntgr
   | TDate
   deriving (Eq, Ord, Show)
 

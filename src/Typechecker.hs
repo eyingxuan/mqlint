@@ -1,5 +1,4 @@
--- TODO: Change to not export processStage
-module Typechecker (processStage) where
+module Typechecker (typecheck) where
 
 import Control.Monad.Except (ExceptT, MonadError (throwError))
 import Control.Monad.Identity (Identity)
@@ -7,8 +6,8 @@ import Control.Monad.Reader (MonadReader (ask), ReaderT, lift)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Schema (accessPossibleTys, updateSchemaTy)
-import Types (BSONType (..), Context, SchemaTy (..), Stage (..))
-import Utils (withErr)
+import Types (AST (..), BSONType (..), Context, SchemaTy (..), Stage (..))
+import Utils (toBsonType, withErr)
 
 type TypecheckResult = ReaderT Context (ExceptT String Identity)
 
@@ -60,7 +59,20 @@ processStage (Lookup foreignCol localFp foreignFp as) sch = do
           else throwError "Local and foreign lookup fields do not match"
       _ -> throwError "not possible"
     else throwError "Local and foreign lookup fields do not match"
+processStage (Facet m) sch = do
+  newTy <-
+    mapM
+      ( \(k, v) -> do
+          facetTy <- typecheck v sch
+          return (k, toBsonType facetTy)
+      )
+      (Map.toList m)
+  return $ S (Set.fromList [Map.fromList newTy])
+processStage (Project m) sch = undefined
 processStage _ _ = undefined
 
--- typecheck :: Context -> BSONType -> AST -> Either String BSONType
--- typecheck ctx expTy ast = undefined
+typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
+typecheck (Pipeline []) ty = return ty
+typecheck (Pipeline (hd : tl)) ty = do
+  nextSch <- processStage hd ty
+  typecheck (Pipeline tl) nextSch

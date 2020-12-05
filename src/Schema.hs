@@ -6,23 +6,7 @@ import Control.Monad.Identity (Identity)
 import Data.Map.Internal (Map, delete, empty, insert, (!?))
 import qualified Data.Set as Set
 import Types (BSONType (..), Exception, FieldPath, Index (..), SchemaMap, SchemaTy (..))
-import Utils (withErr)
-
-toBsonType :: SchemaTy -> BSONType
-toBsonType (S l) = TSum $ Set.map TObject l
-
-fromBsonType :: BSONType -> Exception SchemaTy
-fromBsonType bty = case bty of
-  TSum l -> do
-    sty <-
-      mapM
-        ( \ty -> case ty of
-            TObject m -> return m
-            _ -> throwError "Conversion error"
-        )
-        (Set.toList l)
-    return $ S (Set.fromList sty)
-  _ -> throwError "Conversion error"
+import Utils (fromBsonType, toBsonType, withErr)
 
 updateSchemaTy :: FieldPath -> (BSONType -> Exception BSONType) -> SchemaTy -> Exception SchemaTy
 updateSchemaTy fp trans sch = do
