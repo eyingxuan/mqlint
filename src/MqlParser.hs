@@ -1,13 +1,12 @@
-module Parser where
+module MqlParser where
+
 import Text.ParserCombinators.Parsec
-import Types (AST (..), Accumulator (..), BSON (..), Expression (..), Op (..), Stage (..), FieldPath (..), Index (..))
-import Control.Applicative ((<$>), (<*>), (<*), (*>), (<$), empty)
 
-import Data.Map (Map)
-import Numeric (readSigned, readFloat)
 import qualified Data.Map as Map
+import Data.Map (Map)
 
-type TransformResult a = Either String a
+import ParserCommon (JSON (..), TransformResult, getValue, getStringValue)
+import Types (BSON (..), FieldPath (..), Expression (..), Index (..), Op (..), Stage (..), Accumulator (..), AST (..))
 
 indexP :: Parser Index
 indexP = try (many1 digit) *> pure ArrayIndex
@@ -47,6 +46,9 @@ makeExpression (JStr s) = case parse fieldPathP "" s of
   Right fp -> return $ FP fp
 makeExpression JNull = return $ Lit Null
 makeExpression (JArray arr) = EArray <$> mapM makeExpression arr
+-- Operators and flat expression objects are both JSON objects.
+-- An object is only an operator iff there is exactly one key AND that key
+-- is in the set of operators.
 makeExpression (JObject o) = case Map.toList o of
   [("$literal", v)] -> return $ Lit $ makeLiteral v
   [(f, v)] -> case operatorOf f of
@@ -54,7 +56,6 @@ makeExpression (JObject o) = case Map.toList o of
       (JArray arr) -> mapM makeExpression arr
       _ -> singleton <$> makeExpression v
     Nothing -> EObject <$> mapM makeExpression o
-  -- Operator expressions have exactly one key, otherwise this is an object.
   _ -> EObject <$> mapM makeExpression o 
   
   
@@ -66,13 +67,7 @@ parseStage m (JObject o) = case Map.toList o of
   _ -> Left "Stage must only have one key."
 parseStage _ _ = Left "Stage must be an object."
 
-getStringValue k m = case getValue k m of
-  Right (JStr s) -> Right s
-  _ -> Left "could not parse string."
 
-getValue k m = case Map.lookup k m of
-  Just v -> Right v
-  Nothing -> Left "Could not find key in stage."
 
 getFieldPath (JStr s) = case parse fieldPathP "" s of
   Left _ -> Left "error parsing fieldpath"
@@ -126,57 +121,3 @@ makePipeline (JArray l) = do
       return (h : t)
 
 makePipeline _ = Left "Pipeline must be array of stages."
-
--- Structured JSON is the intermediate representation between input text and 
--- a fully parsed pipeline.
-data JSON
-  = JNumber Double
-  | JStr String
-  | JObject (Map String JSON)
-  | JArray [JSON]
-  | JNull
-  | JBool Bool
-  deriving (Eq, Show)
-
-jTopP :: Parser JSON
-jTopP = whitespace *>
-        (JObject <$> jObjP 
-        <|> JArray <$> jArrP
-        <?> "Top-level must be object or array.")
-
-jArrP :: Parser [JSON]
-jArrP = lexeme (char '[') *> jValP `sepBy` lexeme (char ',') <* lexeme (char ']')
-
-jObjP :: Parser (Map String JSON)
-jObjP = lexeme (char '{') *> (Map.fromList <$> lexeme jPairP `sepBy` lexeme (char ',')) <* lexeme (char '}')
-
-jPairP :: Parser (String, JSON)
-jPairP = (,) <$> lexeme stringV <*> (lexeme (char ':') *> lexeme jValP)
-
-constP :: String -> a -> Parser a
-constP s x = string s *> pure x
-
-jValP :: Parser JSON 
-jValP = JStr <$> stringV
-        <|> JNumber <$> numberV
-        <|> JBool <$> (constP "true" True <|> constP "false" False)
-        <|> constP "null" JNull
-        <|> JObject <$> jObjP
-        <|> JArray <$> jArrP
-        <?> "JSON value"
-
-whitespace :: Parser ()
-whitespace = many (oneOf " \n\t") *> pure ()
-
-lexeme :: Parser a -> Parser a
-lexeme p = p <* whitespace
-
-stringV :: Parser String
-stringV = char '\"' *> many (noneOf "\"") <* char '\"'
-
-numberV :: Parser Double
-numberV = do s <- getInput
-             case readSigned readFloat s of
-                [(n, s')] -> n <$ setInput s'
-                _         -> empty
-
