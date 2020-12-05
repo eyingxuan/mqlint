@@ -1,5 +1,6 @@
 module SchemaTests (schemaTests) where
 
+import Control.Monad.Except (MonadError (throwError))
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Schema (accessPossibleTys, narrowDiscUnion, updateSchemaTy)
@@ -29,19 +30,19 @@ testDirectAccess :: Test
 testDirectAccess =
   "direct access schema"
     ~: TestList
-      [ accessPossibleTys [ObjectIndex "x"] s1 ~?= Right [TStr],
-        accessPossibleTys [ObjectIndex "y"] s1 ~?= Right [TIntgr],
-        accessPossibleTys [ObjectIndex "x"] s2 ~?= Right [TObject m1],
-        accessPossibleTys [ObjectIndex "z"] s2 ~?= Right [TDate]
+      [ accessPossibleTys [ObjectIndex "x"] s1 ~?= return [TStr],
+        accessPossibleTys [ObjectIndex "y"] s1 ~?= return [TIntgr],
+        accessPossibleTys [ObjectIndex "x"] s2 ~?= return [TObject m1],
+        accessPossibleTys [ObjectIndex "z"] s2 ~?= return [TDate]
       ]
 
 testNestedAccess :: Test
 testNestedAccess =
   "nested access schema"
     ~: TestList
-      [ accessPossibleTys [ObjectIndex "x", ObjectIndex "z"] s3 ~?= Right [TDate],
-        accessPossibleTys [ObjectIndex "x", ObjectIndex "x"] s3 ~?= Right [TObject m1],
-        accessPossibleTys [ObjectIndex "y", ObjectIndex "x"] s3 ~?= Right [TStr]
+      [ accessPossibleTys [ObjectIndex "x", ObjectIndex "z"] s3 ~?= return [TDate],
+        accessPossibleTys [ObjectIndex "x", ObjectIndex "x"] s3 ~?= return [TObject m1],
+        accessPossibleTys [ObjectIndex "y", ObjectIndex "x"] s3 ~?= return [TStr]
       ]
 
 d1 :: Map.Map String BSONType
@@ -61,11 +62,11 @@ testSumTypeAccess =
           [ ObjectIndex "z"
           ]
           s4
-          ~?= Right [TIntgr, TDate],
+          ~?= return [TIntgr, TDate],
         accessPossibleTys
           [ObjectIndex "x"]
           s4
-          ~?= Left "Field name not found in object"
+          ~?= throwError "Field name not found in object"
       ]
 
 d3 :: Map.Map String BSONType
@@ -84,11 +85,11 @@ testUpdateTy =
       [ updateSchemaTy
           [ObjectIndex "x"]
           ( \b -> case b of
-              TArray t -> Right t
-              _ -> Left "Cannot unwind non-array type"
+              TArray t -> return t
+              _ -> throwError "Cannot unwind non-array type"
           )
           s5
-          ~?= Right
+          ~?= return
             ( S
                 ( Set.fromList
                     [ Map.fromList [("v", TConst "version2"), ("x", TDate)],
@@ -112,7 +113,7 @@ testTypeDiscrimination =
   "type discrimination schema"
     ~: TestList
       [ narrowDiscUnion [ObjectIndex "v"] (== "version1") s4
-          ~?= Right (S (Set.fromList [d1])),
+          ~?= return (S (Set.fromList [d1])),
         narrowDiscUnion [ObjectIndex "addr", ObjectIndex "t"] (== "long") s6
-          ~?= Right (S (Set.fromList [Map.fromList [("person", TStr), ("addr", TSum (Set.fromList [TObject d6]))]]))
+          ~?= return (S (Set.fromList [Map.fromList [("person", TStr), ("addr", TSum (Set.fromList [TObject d6]))]]))
       ]
