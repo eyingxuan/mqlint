@@ -1,13 +1,14 @@
 module Typechecker (typecheck) where
 
+import Control.Monad (foldM, mapM)
 import Control.Monad.Except (ExceptT, MonadError (throwError))
 import Control.Monad.Identity (Identity)
 import Control.Monad.Reader (MonadReader (ask), ReaderT, lift)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
-import Schema (accessPossibleTys, updateSchemaTy)
-import Types (AST (..), BSONType (..), Context, SchemaTy (..), Stage (..))
-import Utils (toBsonType, withErr)
+import Schema (accessPossibleTys, insertSchemaPath, removeSchemaPath, updateSchemaTy)
+import Types (AST (..), BSONType (..), Context, Expression (..), FieldPath (..), Index (..), SchemaTy (..), Stage (..))
+import Utils (fromBsonType, toBsonType, withErr)
 
 type TypecheckResult = ReaderT Context (ExceptT String Identity)
 
@@ -33,6 +34,22 @@ isSubtype (TObject m1) (TObject m2) =
 isSubtype t1 t2
   | t1 == t2 = True
   | otherwise = False
+
+-- Throws an error if mixture of exclusion with other expressions
+isAllExclusion :: Expression -> ExceptT String Identity Bool
+isAllExclusion (FP _) = return False
+isAllExclusion (Inclusion b) = return $ not b
+isAllExclusion (Lit _) = return False
+isAllExclusion (EArray _) = return False
+isAllExclusion (Application _ _) = return False
+isAllExclusion (EObject m) = do
+  res <- mapM (\(_, v) -> isAllExclusion v) (Map.toList m)
+  if all (== True) res
+    then return True
+    else
+      if all (== False) res
+        then return False
+        else throwError "Mixing exclusion with other expressions not allowed"
 
 processStage :: Stage -> SchemaTy -> TypecheckResult SchemaTy
 processStage (Unwind fp) sch =
@@ -68,7 +85,63 @@ processStage (Facet m) sch = do
       )
       (Map.toList m)
   return $ S (Set.fromList [Map.fromList newTy])
-processStage (Project m) sch = undefined
+-- support short-hand field path accesses?
+processStage (Project m) sch = do
+  exclude <- lift $ isAllExclusion (EObject m)
+  l <- collectModifications m sch exclude []
+  foldM
+    ( \acc (fp, ty) ->
+        case ty of
+          Nothing -> lift $ removeSchemaPath fp acc
+          Just newTy -> lift $ insertSchemaPath fp newTy acc
+    )
+    sch
+    l
+  where
+    collectModifications :: Map.Map String Expression -> SchemaTy -> Bool -> FieldPath -> TypecheckResult [(FieldPath, Maybe BSONType)]
+    collectModifications m sch True fp =
+      foldM
+        ( \acc (k, v) ->
+            case v of
+              Inclusion False -> return $ (ObjectIndex k : fp, Nothing) : acc
+              EObject nxtProjExp -> do
+                res <- collectModifications nxtProjExp sch True (ObjectIndex k : fp)
+                return $ res ++ acc
+              _ -> throwError "Not possible"
+        )
+        []
+        (Map.toList m)
+    collectModifications m sch False fp =
+      undefined
+    collectModifications _ _ _ _ = undefined
+
+-- sty <- helper m (toBsonType sch) sch exclude
+-- lift $ fromBsonType sty
+-- where
+--   helper :: Map.Map String Expression -> BSONType -> SchemaTy -> Bool -> TypecheckResult BSONType
+--   helper projExp (TSum s) rootSch exclude =
+--     TSum
+--       <$> foldM
+--         ( \acc sch -> do
+--             newSch <- helper projExp sch rootSch exclude
+--             return $ Set.insert newSch acc
+--         )
+--         Set.empty
+--         s
+--   helper (projExp) (TObject tym) rootSch True =
+--     TObject
+--       <$> foldM
+--         ( \acc (k, v) -> do
+--             schVal <- lift $ withErr (tym Map.!? k) "Cannot find field-path in object"
+--             case v of
+--               EObject em -> undefined
+--               Inclusion False -> undefined
+--               _ -> throwError "not possible"
+--         )
+--         tym
+--         (Map.toList projExp)
+--   helper (projExp) (TObject tym) rootSch False = undefined
+--   helper projExp _ _ _ = throwError "Invalid projection traversal"
 processStage _ _ = undefined
 
 typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
