@@ -18,35 +18,20 @@ updateSchemaTy fp trans sch = do
     helper (ArrayIndex : tl) trans (TArray ty) = do
       newT <- helper tl trans ty
       return $ TArray newT
-    helper fp@(ArrayIndex : _) trans (TSum tyl) =
-      TSum . Set.fromList
+    helper fp@(_ : _) trans (TSum tyl) =
+      TSum
         <$> foldM
-          ( \acc ty ->
-              case ty of
-                TArray aty -> do
-                  resTy <- helper fp trans (TArray aty)
-                  return $ resTy : acc
-                _ -> throwError "Cannot array index into sum type containing non-array type"
+          ( \acc ty -> do
+              resTy <- helper fp trans ty
+              return $ Set.insert resTy acc
           )
-          []
+          Set.empty
           tyl
     helper (ArrayIndex : _) _ _ = throwError "Cannot array index into non-array type"
     helper ((ObjectIndex s) : tl) trans (TObject m) = do
       fty <- withErr (m !? s) "Field name not found in object"
       transFty <- helper tl trans fty
       return $ TObject (insert s transFty m)
-    helper fp@(ObjectIndex _ : _) trans (TSum tyl) =
-      TSum . Set.fromList
-        <$> foldM
-          ( \acc ty ->
-              case ty of
-                TObject oty -> do
-                  resTy <- helper fp trans (TObject oty)
-                  return $ resTy : acc
-                _ -> throwError "Cannot object index into sum type containing non-object type"
-          )
-          []
-          tyl
     helper ((ObjectIndex _) : _) _ _ = throwError "Cannot object index into non-object type"
 
 removeSchemaPath :: FieldPath -> SchemaTy -> Exception SchemaTy
@@ -56,6 +41,15 @@ removeSchemaPath fp sch = do
   where
     helper :: FieldPath -> BSONType -> Exception BSONType
     helper [] _ = throwError "Cannot remove with empty field path"
+    helper fp@(ObjectIndex _ : _) (TSum s) =
+      TSum
+        <$> foldM
+          ( \acc ty -> do
+              resTy <- helper fp ty
+              return $ Set.insert resTy acc
+          )
+          Set.empty
+          s
     helper [ObjectIndex s] (TObject m) = return (TObject $ delete s m)
     helper (ObjectIndex s : tl) (TObject m) = case m !? s of
       Just fty -> do
@@ -64,9 +58,7 @@ removeSchemaPath fp sch = do
       Nothing -> return $ TObject m
     helper _ _ = throwError "Cannot index object"
 
--- insertion errors if the type already exists on an object
--- mongo does not allow overlapping projections anyways
--- however, this does limit the use of this function
+-- insertion replaces current type at field path
 insertSchemaPath :: FieldPath -> BSONType -> SchemaTy -> Exception SchemaTy
 insertSchemaPath fp newTy sch = do
   sty <- helper fp newTy (toBsonType sch)
@@ -74,9 +66,17 @@ insertSchemaPath fp newTy sch = do
   where
     helper :: FieldPath -> BSONType -> BSONType -> Exception BSONType
     helper [] _ _ = throwError "Cannot insert with empty field path"
-    helper [ObjectIndex s] newTy (TObject m) = case m !? s of
-      Just _ -> throwError "Type already exists at field path"
-      Nothing -> return (TObject $ insert s newTy m)
+    helper fp@(ObjectIndex _ : _) newTy (TSum s) =
+      TSum
+        <$> foldM
+          ( \acc ty -> do
+              resTy <- helper fp newTy ty
+              return $ Set.insert resTy acc
+          )
+          Set.empty
+          s
+    helper [ObjectIndex s] newTy (TObject m) =
+      return (TObject $ insert s newTy m)
     helper (ObjectIndex s : tl) newTy (TObject m) = case m !? s of
       Just fty -> do
         transTy <- helper tl newTy fty
@@ -84,7 +84,7 @@ insertSchemaPath fp newTy sch = do
       Nothing -> do
         transTy <- helper tl newTy (TObject empty)
         return (TObject $ insert s transTy m)
-    helper _ _ _ = throwError "Cannot index object"
+    helper _ _ _ = throwError "Cannot index non-object"
 
 accessPossibleTys :: FieldPath -> SchemaTy -> Exception [BSONType]
 accessPossibleTys [] _ = throwError "No index provided"
@@ -115,17 +115,17 @@ narrowDiscUnion fp pred sch = do
   where
     helper :: FieldPath -> (String -> Bool) -> BSONType -> Exception BSONType
     helper [ObjectIndex s] pred (TSum tyl) =
-      TSum . Set.fromList
+      TSum
         <$> foldM
           ( \acc ty -> case ty of
               TObject m -> do
                 fty <- withErr (m !? s) "Cannot find field"
                 case fty of
-                  TConst s' -> if pred s' then return $ ty : acc else return acc
-                  _ -> return (ty : acc)
+                  TConst s' -> if pred s' then return (Set.insert ty acc) else return acc
+                  _ -> return $ Set.insert ty acc
               _ -> throwError "Cannot object index sum type with non-object types"
           )
-          []
+          Set.empty
           tyl
     helper (ArrayIndex : tl) pred (TArray aty) = do
       newTy <- helper tl pred aty

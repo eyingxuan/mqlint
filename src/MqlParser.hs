@@ -17,7 +17,7 @@ fieldPathP = char '$' *> indexP `sepBy` char '.'
 
 makeLiteral :: JSON -> BSON
 makeLiteral (JBool b) = Boolean b
-makeLiteral (JNumber n) = Dbl n
+makeLiteral (JNumber n) = Number n
 makeLiteral (JStr s) = Str s
 makeLiteral JNull = Null
 makeLiteral (JObject o) = Object $ makeLiteral <$> o

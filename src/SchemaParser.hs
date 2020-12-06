@@ -11,8 +11,7 @@ import Types (BSONType (..), Context, SchemaTy (..))
 typeOf :: String -> BSONType
 typeOf "string" = TStr
 typeOf "boolean" = TBool
-typeOf "double" = TDbl
-typeOf "integer" = TIntgr
+typeOf "number" = TNumber
 typeOf "date" = TDate
 typeOf "id" = TObjectId
 typeOf s = TConst s

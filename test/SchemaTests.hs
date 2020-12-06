@@ -3,16 +3,24 @@ module SchemaTests (schemaTests) where
 import Control.Monad.Except (MonadError (throwError))
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
-import Schema (accessPossibleTys, narrowDiscUnion, updateSchemaTy)
+import Schema (accessPossibleTys, insertSchemaPath, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
 import Test.HUnit (Test (..), (~:), (~?=))
 import Types (BSONType (..), Index (..), SchemaTy (..))
 import Utils (withErr)
 
 schemaTests :: Test
-schemaTests = TestList [testDirectAccess, testNestedAccess, testSumTypeAccess, testTypeDiscrimination, testUpdateTy]
+schemaTests =
+  TestList
+    [ testDirectAccess,
+      testNestedAccess,
+      testSumTypeAccess,
+      testTypeDiscrimination,
+      testUpdateTy,
+      testRemoveSchemaType
+    ]
 
 m1 :: Map.Map String BSONType
-m1 = Map.fromList [("x", TStr), ("y", TIntgr)]
+m1 = Map.fromList [("x", TStr), ("y", TNumber)]
 
 s1 :: SchemaTy
 s1 = S (Set.fromList [m1])
@@ -31,7 +39,7 @@ testDirectAccess =
   "direct access schema"
     ~: TestList
       [ accessPossibleTys [ObjectIndex "x"] s1 ~?= return [TStr],
-        accessPossibleTys [ObjectIndex "y"] s1 ~?= return [TIntgr],
+        accessPossibleTys [ObjectIndex "y"] s1 ~?= return [TNumber],
         accessPossibleTys [ObjectIndex "x"] s2 ~?= return [TObject m1],
         accessPossibleTys [ObjectIndex "z"] s2 ~?= return [TDate]
       ]
@@ -46,7 +54,7 @@ testNestedAccess =
       ]
 
 d1 :: Map.Map String BSONType
-d1 = Map.fromList [("v", TConst "version1"), ("x", TIntgr), ("z", TIntgr)]
+d1 = Map.fromList [("v", TConst "version1"), ("x", TNumber), ("z", TNumber)]
 
 d2 :: Map.Map String BSONType
 d2 = Map.fromList [("v", TConst "version2"), ("y", TObject m2), ("z", TDate)]
@@ -62,7 +70,7 @@ testSumTypeAccess =
           [ ObjectIndex "z"
           ]
           s4
-          ~?= return [TIntgr, TDate],
+          ~?= return [TNumber, TDate],
         accessPossibleTys
           [ObjectIndex "x"]
           s4
@@ -70,7 +78,7 @@ testSumTypeAccess =
       ]
 
 d3 :: Map.Map String BSONType
-d3 = Map.fromList [("v", TConst "version1"), ("x", TArray TIntgr)]
+d3 = Map.fromList [("v", TConst "version1"), ("x", TArray TNumber)]
 
 d4 :: Map.Map String BSONType
 d4 = Map.fromList [("v", TConst "version2"), ("x", TArray TDate)]
@@ -93,7 +101,7 @@ testUpdateTy =
             ( S
                 ( Set.fromList
                     [ Map.fromList [("v", TConst "version2"), ("x", TDate)],
-                      Map.fromList [("v", TConst "version1"), ("x", TIntgr)]
+                      Map.fromList [("v", TConst "version1"), ("x", TNumber)]
                     ]
                 )
             )
@@ -103,7 +111,7 @@ d5 :: Map.Map String BSONType
 d5 = Map.fromList [("t", TConst "short"), ("x", TStr)]
 
 d6 :: Map.Map String BSONType
-d6 = Map.fromList [("t", TConst "long"), ("x", TIntgr), ("y", TStr)]
+d6 = Map.fromList [("t", TConst "long"), ("x", TNumber), ("y", TStr)]
 
 s6 :: SchemaTy
 s6 = S (Set.fromList [Map.fromList [("person", TStr), ("addr", TSum (Set.fromList [TObject d5, TObject d6]))]])
@@ -116,4 +124,28 @@ testTypeDiscrimination =
           ~?= return (S (Set.fromList [d1])),
         narrowDiscUnion [ObjectIndex "addr", ObjectIndex "t"] (== "long") s6
           ~?= return (S (Set.fromList [Map.fromList [("person", TStr), ("addr", TSum (Set.fromList [TObject d6]))]]))
+      ]
+
+testRemoveSchemaType :: Test
+testRemoveSchemaType =
+  "remove arbitrary nested field from schema"
+    ~: TestList
+      [ removeSchemaPath [ObjectIndex "v"] s5
+          ~?= return
+            ( S
+                (Set.fromList [Map.fromList [("x", TArray TNumber)], Map.fromList [("x", TArray TDate)]])
+            ),
+        removeSchemaPath [ObjectIndex "x", ObjectIndex "x"] s3
+          ~?= return
+            ( S
+                ( Set.fromList
+                    [ Map.fromList
+                        [ ( "x",
+                            TObject (Map.fromList [("z", TDate)])
+                          ),
+                          ("y", TObject (Map.fromList [("x", TStr), ("y", TNumber)]))
+                        ]
+                    ]
+                )
+            )
       ]

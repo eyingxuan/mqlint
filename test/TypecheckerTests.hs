@@ -7,7 +7,7 @@ import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Test.HUnit (Test (..), (~:), (~?=))
 import Typechecker (typecheck)
-import Types (BSONType (..), Index (..), SchemaTy (..), Stage (..))
+import Types (AST (..), BSONType (..), Index (..), SchemaTy (..), Stage (..))
 
 typecheckerTests :: Test
 typecheckerTests = TestList [testSimpleLookup]
@@ -16,7 +16,7 @@ m1 :: SchemaTy
 m1 = S (Set.fromList [Map.fromList [("x", TStr), ("y", TStr)]])
 
 m2 :: SchemaTy
-m2 = S (Set.fromList [Map.fromList [("x", TStr), ("z", TIntgr)]])
+m2 = S (Set.fromList [Map.fromList [("x", TStr), ("z", TNumber)]])
 
 db1 :: Map.Map String SchemaTy
 db1 = Map.fromList [("col1", m1), ("col2", m2)]
@@ -44,7 +44,7 @@ testSimpleLookup =
                               (Map.fromList [("x", TStr), ("y", TStr)])
                           ),
                           ("x", TStr),
-                          ("z", TIntgr)
+                          ("z", TNumber)
                         ]
                     ]
                 )
