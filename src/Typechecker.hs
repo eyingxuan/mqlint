@@ -8,7 +8,7 @@ import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import ExpressionType (typeOfExpression)
 import Schema (accessPossibleTys, insertSchemaPath, removeSchemaPath, updateSchemaTy)
-import Types (AST (..), BSONType (..), Context, Exception, Expression (..), FieldPath (..), Index (..), SchemaTy (..), Stage (..))
+import Types (Accumulator, AST (..), BSONType (..), Context, Exception, Expression (..), FieldPath (..), Index (..), SchemaTy (..), Stage (..))
 import Utils (fromBsonType, toBsonType, withErr)
 
 type TypecheckResult = ReaderT Context (ExceptT String Identity)
@@ -86,6 +86,9 @@ processStage (Facet m) sch = do
       )
       (Map.toList m)
   return $ S (Set.fromList [Map.fromList newTy])
+
+
+
 -- support short-hand field path accesses?
 processStage (Project m) sch = do
   exclude <- lift $ isAllExclusion (EObject m)
@@ -145,10 +148,25 @@ processStage (Project m) sch = do
           Map.empty
           (Map.toList projExp)
     processInclusions _ _ _ = undefined
+
+
+processStage (Group groupByExpr accumulations) schema = do
+  idType <- lift $ typeOfExpression schema groupByExpr
+  accTypes <- lift $ mapM (\(a,b,c) -> (,,) a b <$> typeOfExpression schema c) accumulations
+  newTypes <- Map.fromList <$> mapM (\(key, acc, rT) -> (,) key <$> getAccReturnT acc rT) accTypes
+  let newSchema = Map.insert "_id" idType newTypes
+  return $ S $ Set.singleton newSchema
+
 processStage _ _ = undefined
+
+
+-- TODO: Add in accumulator types.
+getAccReturnT :: Accumulator -> BSONType -> TypecheckResult BSONType
+getAccReturnT _ _ = throwError "Not proper argument type for accumulator."
 
 typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
 typecheck (Pipeline []) ty = return ty
 typecheck (Pipeline (hd : tl)) ty = do
   nextSch <- processStage hd ty
   typecheck (Pipeline tl) nextSch
+
