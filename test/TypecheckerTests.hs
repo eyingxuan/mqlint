@@ -98,5 +98,16 @@ testSimpleProject =
                       Map.fromList [("x", TObject (Map.fromList [("z", TNumber)]))]
                     ]
                 )
-            )
+            ),
+        runIdentity
+          ( runExceptT
+              ( runReaderT
+                  ( typecheck
+                      (Pipeline [Project (Map.fromList [("x", EObject (Map.fromList [("x", Inclusion True)]))])])
+                      m3
+                  )
+                  db1
+              )
+          )
+          ~?= Right (S (Set.fromList [Map.fromList [("x", TObject (Map.fromList [("x", TStr)]))]]))
       ]
