@@ -88,7 +88,10 @@ getAccumulation _ = Left "Accumulator inside $group must be an object."
 makeStage :: JSON -> TransformResult Stage
 makeStage =
   parseStage
-    [ ("$match", fmap Match . makeExpression),
+    [ ("$match",
+       withObj
+        ( \o -> Match <$> (getValue "$expr" o >>= makeExpression))
+      ),
       ("$unwind", fmap Unwind . getFieldPath),
       ( "$lookup",
         withObj
