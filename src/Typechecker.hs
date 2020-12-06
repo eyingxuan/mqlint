@@ -71,24 +71,17 @@ processStage (Project m) sch = do
   if exclude
     then do
       l <- lift $ collectRemovals m []
-      foldM
-        ( \acc (fp, ty) ->
-            case ty of
-              Nothing -> lift $ removeSchemaPath fp acc
-              Just newTy -> lift $ insertSchemaPath fp newTy acc
-        )
-        sch
-        l
+      foldM (\acc fp -> lift $ removeSchemaPath fp acc) sch l
     else do
       res <- lift $ processInclusions m (toBsonType sch) sch
       lift $ fromBsonType res
   where
-    collectRemovals :: Map.Map String Expression -> FieldPath -> Exception [(FieldPath, Maybe BSONType)]
+    collectRemovals :: Map.Map String Expression -> FieldPath -> Exception [FieldPath]
     collectRemovals m fp =
       foldM
         ( \acc (k, v) ->
             case v of
-              Inclusion False -> return $ (ObjectIndex k : fp, Nothing) : acc
+              Inclusion False -> return $ (ObjectIndex k : fp) : acc
               EObject nxtProjExp -> do
                 res <- collectRemovals nxtProjExp (ObjectIndex k : fp)
                 return $ res ++ acc
