@@ -6,8 +6,9 @@ import Control.Monad.Identity (Identity)
 import Control.Monad.Reader (MonadReader (ask), ReaderT, lift)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
+import ExpressionType (typeOfExpression)
 import Schema (accessPossibleTys, insertSchemaPath, removeSchemaPath, updateSchemaTy)
-import Types (AST (..), BSONType (..), Context, Expression (..), FieldPath (..), Index (..), SchemaTy (..), Stage (..))
+import Types (AST (..), BSONType (..), Context, Exception, Expression (..), FieldPath (..), Index (..), SchemaTy (..), Stage (..))
 import Utils (fromBsonType, toBsonType, withErr)
 
 type TypecheckResult = ReaderT Context (ExceptT String Identity)
@@ -90,7 +91,7 @@ processStage (Project m) sch = do
   exclude <- lift $ isAllExclusion (EObject m)
   if exclude
     then do
-      l <- collectRemovals m []
+      l <- lift $ collectRemovals m []
       foldM
         ( \acc (fp, ty) ->
             case ty of
@@ -100,10 +101,10 @@ processStage (Project m) sch = do
         sch
         l
     else do
-      res <- processInclusions m (toBsonType sch)
+      res <- lift $ processInclusions m (toBsonType sch) sch
       lift $ fromBsonType res
   where
-    collectRemovals :: Map.Map String Expression -> FieldPath -> TypecheckResult [(FieldPath, Maybe BSONType)]
+    collectRemovals :: Map.Map String Expression -> FieldPath -> Exception [(FieldPath, Maybe BSONType)]
     collectRemovals m fp =
       foldM
         ( \acc (k, v) ->
@@ -116,32 +117,34 @@ processStage (Project m) sch = do
         )
         []
         (Map.toList m)
-    processInclusions :: Map.Map String Expression -> BSONType -> TypecheckResult BSONType
-    processInclusions projExp (TSum s) =
+    processInclusions :: Map.Map String Expression -> BSONType -> SchemaTy -> Exception BSONType
+    processInclusions projExp (TSum s) baseSch =
       TSum
         <$> foldM
           ( \acc sch -> do
-              newSch <- processInclusions projExp sch
+              newSch <- processInclusions projExp sch baseSch
               return $ Set.insert newSch acc
           )
           Set.empty
           s
-    processInclusions projExp (TObject m) =
+    processInclusions projExp (TObject m) baseSch =
       TObject
         <$> foldM
           ( \acc (k, v) -> do
-              ogTy <- lift $ withErr (m Map.!? k) "Trying to project field that does not exist"
+              ogTy <- withErr (m Map.!? k) "Trying to project field that does not exist"
               case v of
                 Inclusion True ->
                   return $ Map.insert k ogTy acc
                 EObject nxtProjExp -> do
-                  res <- processInclusions nxtProjExp ogTy
+                  res <- processInclusions nxtProjExp ogTy baseSch
                   return $ Map.insert k res acc
-                _ -> undefined
+                exp -> do
+                  ty <- typeOfExpression baseSch exp
+                  return $ Map.insert k ty acc
           )
           Map.empty
           (Map.toList projExp)
-    processInclusions _ _ = undefined
+    processInclusions _ _ _ = undefined
 processStage _ _ = undefined
 
 typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy

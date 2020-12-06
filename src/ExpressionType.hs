@@ -1,4 +1,4 @@
-module ExpressionType where
+module ExpressionType (typeOfExpression) where
 
 import qualified Control.Monad as Monad
 import Control.Monad.Except (MonadError (throwError))
@@ -47,23 +47,20 @@ toFieldPath fs =
     then throwError "Inclusions cannot index into arrays."
     else return $ map ObjectIndex $ reverse fs
 
-typeOfExpression :: [String] -> SchemaTy -> Expression -> Exception BSONType
-typeOfExpression _ s (FP fp) = TSum . Set.fromList <$> accessPossibleTys fp s
-typeOfExpression f s (EArray exps) =
-  TArray . TSum . Set.fromList <$> mapM (typeOfExpression ("\n" : f) s) exps
-typeOfExpression _ _ (Lit bson) = return $ typeFromBson bson
-typeOfExpression f s (EObject obj) =
+typeOfExpression :: SchemaTy -> Expression -> Exception BSONType
+typeOfExpression s (FP fp) = TSum . Set.fromList <$> accessPossibleTys fp s
+typeOfExpression s (EArray exps) =
+  TArray . TSum . Set.fromList <$> mapM (typeOfExpression s) exps
+typeOfExpression _ (Lit bson) = return $ typeFromBson bson
+typeOfExpression s (EObject obj) =
   TObject . Map.fromList
     <$> mapM
       ( \(k, exp) ->
-          (,) k <$> typeOfExpression (k : f) s exp
+          (,) k <$> typeOfExpression s exp
       )
       (Map.toList obj)
-typeOfExpression f s (Inclusion i) = do
-  fp <- toFieldPath f
-  tys <- accessPossibleTys fp s
-  if i then return $ TSum $ Set.fromList tys else return $ TSum Set.empty
-typeOfExpression f s (Application op args) = undefined
+typeOfExpression _ (Inclusion i) = throwError "Inclusion cannot be typed"
+typeOfExpression s (Application op args) = undefined
 
 {-
 
