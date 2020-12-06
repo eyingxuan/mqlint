@@ -17,12 +17,13 @@ where
 
 import Control.Monad.Except (ExceptT)
 import Control.Monad.Identity (Identity)
+import Control.Monad.Writer (WriterT)
 import Data.Map.Internal (Map)
 import Data.Set (Set)
 
 type Context = Map String SchemaTy
 
-type Exception = ExceptT String Identity
+type Exception = WriterT [String] (ExceptT String Identity)
 
 data Index
   = ArrayIndex

@@ -3,14 +3,19 @@ module TypecheckerTests (typecheckerTests) where
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Identity (runIdentity)
 import Control.Monad.Reader (runReaderT)
+import Control.Monad.Writer (runWriterT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Test.HUnit (Test (..), (~:), (~?=))
-import Typechecker (typecheck)
+import Typechecker (TypecheckResult, typecheck)
 import Types (AST (..), BSONType (..), Expression (..), Index (..), SchemaTy (..), Stage (..))
 
 typecheckerTests :: Test
 typecheckerTests = TestList [testSimpleLookup, testSimpleProject]
+
+runTypechecker :: AST -> SchemaTy -> Map.Map String SchemaTy -> Either String (SchemaTy, [String])
+runTypechecker p sch db =
+  runIdentity (runExceptT (runWriterT (runReaderT (typecheck p sch) db)))
 
 s1 :: Map.Map String BSONType
 s1 = Map.fromList [("x", TStr), ("y", TStr)]
@@ -40,16 +45,7 @@ testSimpleLookup :: Test
 testSimpleLookup =
   "simple lookup typechecking"
     ~: TestList
-      [ runIdentity
-          ( runExceptT
-              ( runReaderT
-                  ( typecheck
-                      (Pipeline [Lookup "col1" [ObjectIndex "x"] [ObjectIndex "y"] "m1"])
-                      m2
-                  )
-                  db1
-              )
-          )
+      [ runTypechecker (Pipeline [Lookup "col1" [ObjectIndex "x"] [ObjectIndex "y"] "m1"]) m2 db1
           ~?= Right
             ( S
                 ( Set.fromList
@@ -62,7 +58,8 @@ testSimpleLookup =
                           ("z", TNumber)
                         ]
                     ]
-                )
+                ),
+              []
             )
       ]
 
@@ -70,44 +67,18 @@ testSimpleProject :: Test
 testSimpleProject =
   "simple project typechecking"
     ~: TestList
-      [ runIdentity
-          ( runExceptT
-              ( runReaderT
-                  ( typecheck
-                      (Pipeline [Project (Map.fromList [("z", Inclusion False)])])
-                      m2
-                  )
-                  db1
-              )
-          )
-          ~?= Right (S (Set.fromList [Map.fromList [("x", TStr)]])),
-        runIdentity
-          ( runExceptT
-              ( runReaderT
-                  ( typecheck
-                      (Pipeline [Project (Map.fromList [("x", EObject (Map.fromList [("x", Inclusion False)]))])])
-                      m3
-                  )
-                  db1
-              )
-          )
+      [ runTypechecker (Pipeline [Project (Map.fromList [("z", Inclusion False)])]) m2 db1
+          ~?= Right (S (Set.fromList [Map.fromList [("x", TStr)]]), []),
+        runTypechecker (Pipeline [Project (Map.fromList [("x", EObject (Map.fromList [("x", Inclusion False)]))])]) m3 db1
           ~?= Right
             ( S
                 ( Set.fromList
                     [ Map.fromList [("x", TObject (Map.fromList [("y", TStr)]))],
                       Map.fromList [("x", TObject (Map.fromList [("z", TNumber)]))]
                     ]
-                )
+                ),
+              []
             ),
-        runIdentity
-          ( runExceptT
-              ( runReaderT
-                  ( typecheck
-                      (Pipeline [Project (Map.fromList [("x", EObject (Map.fromList [("x", Inclusion True)]))])])
-                      m3
-                  )
-                  db1
-              )
-          )
-          ~?= Right (S (Set.fromList [Map.fromList [("x", TObject (Map.fromList [("x", TStr)]))]]))
+        runTypechecker (Pipeline [Project (Map.fromList [("x", EObject (Map.fromList [("x", Inclusion True)]))])]) m3 db1
+          ~?= Right (S (Set.fromList [Map.fromList [("x", TObject (Map.fromList [("x", TStr)]))]]), [])
       ]

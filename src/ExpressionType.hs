@@ -6,6 +6,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Schema (accessPossibleTys)
 import Types (BSON (..), BSONType (..), Exception, Expression (..), FieldPath (..), Index (..), Op (..), SchemaTy (..))
+import Utils (isSubtype)
 
 sumT :: [BSONType] -> BSONType
 sumT = TSum . Set.fromList
@@ -18,7 +19,7 @@ typeOfOp Floor [TNumber] = return TNumber
 typeOfOp Avg [TArray TNumber] = return TNumber
 typeOfOp Max [TArray TNumber] = return TNumber
 typeOfOp Min [TArray TNumber] = return TNumber
-typeOfOp Eq [t1, t2] = if t1 == t2 then return TBool else throwError "Equality must check between identical types."
+typeOfOp Eq [t1, t2] = if isSubtype t1 t2 || isSubtype t2 t1 then return TBool else throwError "Equality must check between identical types."
 typeOfOp _ _ = throwError "Not acceptable parameters for operation."
 
 -- typeOfOp :: Op -> ([BSONType], BSONType)
@@ -61,13 +62,3 @@ typeOfExpression s (EObject obj) =
       (Map.toList obj)
 typeOfExpression _ (Inclusion i) = throwError "Inclusion cannot be typed"
 typeOfExpression s (Application op args) = undefined
-
-{-
-
-T1 { v: "1" , x : { y: 1 }} | T2 { v: "2", x : { y : 1}}
-
-T1 { x : {y : TInt}} | T2 { x : {y : TStr}}
-
-T1 { x : {y : TInt | TStr}}
-
--}

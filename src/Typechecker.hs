@@ -1,43 +1,21 @@
-module Typechecker (typecheck) where
+module Typechecker (typecheck, TypecheckResult) where
 
 import Control.Monad (foldM, mapM)
 import Control.Monad.Except (ExceptT, MonadError (throwError))
 import Control.Monad.Identity (Identity)
 import Control.Monad.Reader (MonadReader (ask), ReaderT, lift)
+import Control.Monad.Writer (MonadWriter (tell))
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import ExpressionType (typeOfExpression)
-import Schema (accessPossibleTys, insertSchemaPath, removeSchemaPath, updateSchemaTy)
-import Types (AST (..), BSONType (..), Context, Exception, Expression (..), FieldPath (..), Index (..), SchemaTy (..), Stage (..))
-import Utils (fromBsonType, toBsonType, withErr)
+import Schema (accessPossibleTys, insertSchemaPath, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
+import Types (AST (..), BSON (..), BSONType (..), Context, Exception, Expression (..), FieldPath (..), Index (..), Op (..), SchemaTy (..), Stage (..))
+import Utils (fromBsonType, isSubtype, toBsonType, withErr)
 
-type TypecheckResult = ReaderT Context (ExceptT String Identity)
-
--- isSubtype t1 t2 checks if t1 <: t2
-isSubtype :: BSONType -> BSONType -> Bool
-isSubtype (TConst _) TStr = True
-isSubtype (TArray ty1) (TArray ty2) = isSubtype ty1 ty2
-isSubtype (TSum s1) (TSum s2) =
-  all
-    ( \ty ->
-        any (`isSubtype` ty) s1
-    )
-    s2
-isSubtype (TObject m1) (TObject m2) =
-  Map.foldrWithKey
-    ( \k v acc ->
-        case m1 Map.!? k of
-          Just v' -> isSubtype v' v && acc
-          Nothing -> False
-    )
-    True
-    m2
-isSubtype t1 t2
-  | t1 == t2 = True
-  | otherwise = False
+type TypecheckResult = ReaderT Context Exception
 
 -- Throws an error if mixture of exclusion with other expressions
-isAllExclusion :: Expression -> ExceptT String Identity Bool
+isAllExclusion :: Expression -> Exception Bool
 isAllExclusion (FP _) = return False
 isAllExclusion (Inclusion b) = return $ not b
 isAllExclusion (Lit _) = return False
@@ -144,7 +122,15 @@ processStage (Project m) sch = do
           )
           Map.empty
           (Map.toList projExp)
-    processInclusions _ _ _ = undefined
+    processInclusions _ _ _ = throwError "Invalid projection"
+processStage (Match exp) sch = do
+  expTy <- lift $ typeOfExpression sch exp
+  if expTy /= TBool
+    then throwError "Match expr of invalid type"
+    else case exp of
+      Application Eq [FP fp, Lit (Str s)] ->
+        lift $ narrowDiscUnion fp (== s) sch
+      _ -> return sch
 processStage _ _ = undefined
 
 typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
