@@ -88,60 +88,60 @@ processStage (Facet m) sch = do
 -- support short-hand field path accesses?
 processStage (Project m) sch = do
   exclude <- lift $ isAllExclusion (EObject m)
-  l <- collectModifications m sch exclude []
-  foldM
-    ( \acc (fp, ty) ->
-        case ty of
-          Nothing -> lift $ removeSchemaPath fp acc
-          Just newTy -> lift $ insertSchemaPath fp newTy acc
-    )
-    sch
-    l
+  if exclude
+    then do
+      l <- collectRemovals m []
+      foldM
+        ( \acc (fp, ty) ->
+            case ty of
+              Nothing -> lift $ removeSchemaPath fp acc
+              Just newTy -> lift $ insertSchemaPath fp newTy acc
+        )
+        sch
+        l
+    else do
+      res <- processInclusions m (toBsonType sch)
+      lift $ fromBsonType res
   where
-    collectModifications :: Map.Map String Expression -> SchemaTy -> Bool -> FieldPath -> TypecheckResult [(FieldPath, Maybe BSONType)]
-    collectModifications m sch True fp =
+    collectRemovals :: Map.Map String Expression -> FieldPath -> TypecheckResult [(FieldPath, Maybe BSONType)]
+    collectRemovals m fp =
       foldM
         ( \acc (k, v) ->
             case v of
               Inclusion False -> return $ (ObjectIndex k : fp, Nothing) : acc
               EObject nxtProjExp -> do
-                res <- collectModifications nxtProjExp sch True (ObjectIndex k : fp)
+                res <- collectRemovals nxtProjExp (ObjectIndex k : fp)
                 return $ res ++ acc
               _ -> throwError "Not possible"
         )
         []
         (Map.toList m)
-    collectModifications m sch False fp =
-      undefined
-    collectModifications _ _ _ _ = undefined
-
--- sty <- helper m (toBsonType sch) sch exclude
--- lift $ fromBsonType sty
--- where
---   helper :: Map.Map String Expression -> BSONType -> SchemaTy -> Bool -> TypecheckResult BSONType
---   helper projExp (TSum s) rootSch exclude =
---     TSum
---       <$> foldM
---         ( \acc sch -> do
---             newSch <- helper projExp sch rootSch exclude
---             return $ Set.insert newSch acc
---         )
---         Set.empty
---         s
---   helper (projExp) (TObject tym) rootSch True =
---     TObject
---       <$> foldM
---         ( \acc (k, v) -> do
---             schVal <- lift $ withErr (tym Map.!? k) "Cannot find field-path in object"
---             case v of
---               EObject em -> undefined
---               Inclusion False -> undefined
---               _ -> throwError "not possible"
---         )
---         tym
---         (Map.toList projExp)
---   helper (projExp) (TObject tym) rootSch False = undefined
---   helper projExp _ _ _ = throwError "Invalid projection traversal"
+    processInclusions :: Map.Map String Expression -> BSONType -> TypecheckResult BSONType
+    processInclusions projExp (TSum s) =
+      TSum
+        <$> foldM
+          ( \acc sch -> do
+              newSch <- processInclusions projExp sch
+              return $ Set.insert newSch acc
+          )
+          Set.empty
+          s
+    processInclusions projExp (TObject m) =
+      TObject
+        <$> foldM
+          ( \acc (k, v) -> do
+              ogTy <- lift $ withErr (m Map.!? k) "Trying to project field that does not exist"
+              case v of
+                Inclusion True ->
+                  return $ Map.insert k ogTy acc
+                EObject nxtProjExp -> do
+                  res <- processInclusions nxtProjExp ogTy
+                  return $ Map.insert k res acc
+                _ -> undefined
+          )
+          Map.empty
+          (Map.toList projExp)
+    processInclusions _ _ = undefined
 processStage _ _ = undefined
 
 typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
