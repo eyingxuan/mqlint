@@ -17,12 +17,11 @@ typeOf "id" = TObjectId
 typeOf s = TConst s
 
 typeOfProperty :: JSON -> TransformResult BSONType
-typeOfProperty (JObject o) = do
+typeOfProperty j@(JObject o) = do
   tval <- getStringValue "type" o
   if tval == "object"
     then do
-      propsObj <- getValue "properties" o
-      props <- fromProperties propsObj
+      props <- fromProperties j
       return $ TObject props
     else
       if tval == "array"

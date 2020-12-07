@@ -56,7 +56,7 @@ removeSchemaPath fp sch = do
         transTy <- helper tl fty
         return (TObject $ insert s transTy m)
       Nothing -> return $ TObject m
-    helper _ _ = throwError "Cannot index object"
+    helper fp ty = throwError ("Cannot index object" ++ show fp ++ ", " ++ show ty)
 
 -- insertion replaces current type at field path
 insertSchemaPath :: FieldPath -> BSONType -> SchemaTy -> Exception SchemaTy

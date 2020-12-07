@@ -19,7 +19,9 @@ typeOfOp Floor [TNumber] = return TNumber
 typeOfOp Avg [TArray TNumber] = return TNumber
 typeOfOp Max [TArray TNumber] = return TNumber
 typeOfOp Min [TArray TNumber] = return TNumber
-typeOfOp Eq [t1, t2] = if isSubtype t1 t2 || isSubtype t2 t1 then return TBool else throwError "Equality must check between identical types."
+typeOfOp Eq [t1, t2] = if isSubtype t1 t2 || isSubtype t2 t1
+  then return TBool
+  else throwError ("Equality must check between identical types: " ++ show t1 ++ ", " ++ show t2)
 typeOfOp _ _ = throwError "Not acceptable parameters for operation."
 
 -- typeOfOp :: Op -> ([BSONType], BSONType)
@@ -61,4 +63,6 @@ typeOfExpression s (EObject obj) =
       )
       (Map.toList obj)
 typeOfExpression _ (Inclusion i) = throwError "Inclusion cannot be typed"
-typeOfExpression s (Application op args) = undefined
+typeOfExpression s (Application op args) = do
+  argsT <- mapM (typeOfExpression s) args
+  typeOfOp op argsT

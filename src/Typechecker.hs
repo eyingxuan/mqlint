@@ -1,18 +1,23 @@
-module Typechecker (typecheck, TypecheckResult) where
+module Typechecker (typecheck, TypecheckResult, runTypechecker) where
 
 import Control.Monad (foldM, mapM)
-import Control.Monad.Except (ExceptT, MonadError (throwError))
-import Control.Monad.Identity (Identity)
-import Control.Monad.Reader (MonadReader (ask), ReaderT, lift)
-import Control.Monad.Writer (MonadWriter (tell))
+import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
+import Control.Monad.Identity (Identity, runIdentity)
+import Control.Monad.Reader (MonadReader (ask), ReaderT, lift, runReaderT)
+import Control.Monad.Writer (MonadWriter (tell), runWriterT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import ExpressionType (typeOfExpression)
 import Schema (accessPossibleTys, insertSchemaPath, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
 import Types (AST (..), Accumulator (..), BSON (..), BSONType (..), Context, Exception, Expression (..), FieldPath (..), Index (..), Op (..), SchemaTy (..), Stage (..))
-import Utils (fromBsonType, isSubtype, toBsonType, withErr)
+import Utils (fromBsonType, isSubtype, toBsonType, withErr, flattenSchemaTy)
 
 type TypecheckResult = ReaderT Context Exception
+
+
+runTypechecker :: AST -> SchemaTy -> Map.Map String SchemaTy -> Either String (SchemaTy, [String])
+runTypechecker p sch db =
+  runIdentity (runExceptT (runWriterT (runReaderT (typecheck p sch) db)))
 
 -- Throws an error if mixture of exclusion with other expressions
 isAllExclusion :: Expression -> Exception Bool
@@ -71,7 +76,7 @@ processStage (Project m) sch = do
   if exclude
     then do
       l <- lift $ collectRemovals m []
-      foldM (\acc fp -> lift $ removeSchemaPath fp acc) sch l
+      foldM (\acc fp -> lift $ removeSchemaPath fp acc) sch (map reverse l)
     else do
       res <- lift $ processInclusions m (toBsonType sch) sch
       lift $ fromBsonType res
@@ -140,4 +145,5 @@ typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
 typecheck (Pipeline []) ty = return ty
 typecheck (Pipeline (hd : tl)) ty = do
   nextSch <- processStage hd ty
-  typecheck (Pipeline tl) nextSch
+  cleanSch <- lift $ flattenSchemaTy nextSch
+  typecheck (Pipeline tl) cleanSch

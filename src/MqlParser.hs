@@ -30,6 +30,7 @@ operatorOf "$abs" = Just Abs
 operatorOf "$ceil" = Just Ceil
 operatorOf "$floor" = Just Floor
 operatorOf "$avg" = Just Avg
+operatorOf "$eq" = Just Eq
 operatorOf _ = Nothing
 
 singleton :: a -> [a]

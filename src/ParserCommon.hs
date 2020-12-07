@@ -16,12 +16,12 @@ data JSON
 
 type TransformResult a = Either String a
 
-getStringValue :: Ord k => k -> Map k JSON -> TransformResult String
+getStringValue :: String -> Map String JSON -> TransformResult String
 getStringValue k m = case getValue k m of
   Right (JStr s) -> Right s
-  _ -> Left "could not parse string."
+  _ -> Left ("could not parse string value " ++ k)
 
-getValue :: Ord k => k -> Map k JSON -> TransformResult JSON
+getValue :: String -> Map String JSON -> TransformResult JSON
 getValue k m = case Map.lookup k m of
   Just v -> Right v
-  Nothing -> Left "Could not find key in stage."
+  Nothing -> Left ("Could not find key in stage: " ++ k)
