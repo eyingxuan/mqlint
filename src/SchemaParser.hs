@@ -7,6 +7,8 @@ import qualified Data.Set as Set
 import JsonParser (parseJson)
 import ParserCommon (JSON (..), TransformResult, getStringValue, getValue)
 import Types (BSONType (..), Context, SchemaTy (..))
+import Text.PrettyPrint (Doc)
+import qualified Text.PrettyPrint as PP
 
 typeOf :: String -> BSONType
 typeOf "string" = TStr

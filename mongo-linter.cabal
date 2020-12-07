@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 43ddd3fd0f20c80c10ff57a17f6f01a1addc805eba379f1aa72d347b349cecd9
+-- hash: c0bcea6024edfd23f54cfc5a684e20d3e13f8962498dcf5588a4f90f76bd9a12
 
 name:           mongo-linter
 version:        0.1.0.0
@@ -25,6 +25,7 @@ library
       Lib
       MqlParser
       ParserCommon
+      Printing
       Schema
       SchemaParser
       Typechecker
@@ -41,6 +42,7 @@ library
     , containers
     , mtl
     , parsec
+    , pretty
   default-language: Haskell2010
 
 executable mongo-linter-exe
@@ -57,6 +59,7 @@ executable mongo-linter-exe
     , mongo-linter
     , mtl
     , parsec
+    , pretty
   default-language: Haskell2010
 
 test-suite mongo-linter-test
@@ -76,4 +79,5 @@ test-suite mongo-linter-test
     , mongo-linter
     , mtl
     , parsec
+    , pretty
   default-language: Haskell2010

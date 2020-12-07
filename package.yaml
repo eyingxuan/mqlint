@@ -23,6 +23,7 @@ dependencies:
   - HUnit
   - parsec
   - mtl
+  - pretty
 
 library:
   source-dirs: src
