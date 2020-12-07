@@ -27,9 +27,9 @@ class PP a where
 wrap :: String -> String -> [Doc] -> Doc
 wrap o c d = (if length d > 1
               then PP.vcat
-              else foldr (PP.<+>) PP.empty)
+              else PP.hsep)
               $ [PP.text o] ++
-              map (\(i, doc) -> PP.nest 2 (
+              map (\(i, doc) -> PP.nest 1 (
                 if i == length d - 1
                   then doc
                   else doc <> PP.text ","
@@ -76,14 +76,17 @@ ex = TObject $ Map.fromList [
     ("addresses", TArray TStr)
   ]
 -- >>> pp ex
--- { "type": "object",
---   "properties": { "active": { "type": "boolean" },
---                   "addresses": { "type": "sum",
---                                  "items": { "type": "string" }
---                                },
---                   "name": { "type": "string" },
---                   "version": { "type": "v1" }
---                 }
+-- {
+--  "type": "object",
+--  "properties": {
+--                 "active": {"type": "boolean"},
+--                 "addresses": {
+--                               "type": "sum",
+--                               "items": {"type": "string"}
+--                              },
+--                 "name": {"type": "string"},
+--                 "version": {"type": "v1"}
+--                }
 -- }
   
 
