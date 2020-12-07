@@ -5,7 +5,21 @@
       "properties": {
         "prop1": { "type": "string" },
         "items": { "type": "array", "items": { "type": "string" } },
-        "version": { "type": "v1" }
+        "version": { "type": "v1" },
+        "example": {"type": "sum", "types": [
+          {"type": "object", 
+           "properties" : {
+             "version": {"type": "v1"},
+             "x": {"type": "string"}
+           }
+          },
+          {"type": "object", 
+           "properties": {
+             "version": {"type": "v2"},
+             "x": {"type": "number"}
+           }
+          }
+        ]}
       }
     }
   ]

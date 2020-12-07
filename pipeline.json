@@ -1,1 +1,1 @@
-[{ "$unwind": "$items" }]
+[{"$project" : {"example" : {"version" : 0, "x" : 0}}}]
