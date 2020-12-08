@@ -1,0 +1,12 @@
+[
+  {
+    "$match": { "$expr": { "$eq": ["$address.version", "v2"] } }
+  },
+  {
+    "$match": {
+      "$expr": {
+        "$eq": ["$address", { "addr": "hello", "zip": { "$literal": 1234 } }]
+      }
+    }
+  }
+]

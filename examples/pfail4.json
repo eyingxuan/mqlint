@@ -1,0 +1,11 @@
+[
+  {
+    "$lookup": {
+      "from": "coll2",
+      "localField": "$id",
+      "foreignField": "$id",
+      "as": "addr"
+    }
+  },
+  { "$project": { "firstName": 1, "zip": "$addr.address.zip" } }
+]

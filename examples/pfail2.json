@@ -1,0 +1,5 @@
+[
+  {
+    "$match": { "$expr": { "$eq": ["$address.zip", "hello"] } }
+  }
+]

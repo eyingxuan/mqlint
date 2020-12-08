@@ -1,0 +1,41 @@
+{
+  "coll1": [
+    {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "pets": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  ],
+  "coll2": [
+    {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "address": {
+          "type": "sum",
+          "types": [
+            {
+              "type": "object",
+              "properties": {
+                "version": { "type": "v1" },
+                "longAddr": { "type": "string" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "version": { "type": "v2" },
+                "addr": { "type": "string" },
+                "zip": { "type": "number" }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

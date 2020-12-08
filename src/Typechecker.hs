@@ -10,10 +10,9 @@ import qualified Data.Set as Set
 import ExpressionType (typeOfExpression)
 import Schema (accessPossibleTys, insertSchemaPath, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
 import Types (AST (..), Accumulator (..), BSON (..), BSONType (..), Context, Exception, Expression (..), FieldPath (..), Index (..), Op (..), SchemaTy (..), Stage (..))
-import Utils (fromBsonType, isSubtype, toBsonType, withErr, flattenSchemaTy)
+import Utils (flattenSchemaTy, fromBsonType, isSubtype, toBsonType, withErr)
 
 type TypecheckResult = ReaderT Context Exception
-
 
 runTypechecker :: AST -> SchemaTy -> Map.Map String SchemaTy -> Either String (SchemaTy, [String])
 runTypechecker p sch db =
@@ -108,16 +107,20 @@ processStage (Project m) sch = do
       TObject
         <$> foldM
           ( \acc (k, v) -> do
-              ogTy <- withErr (m Map.!? k) "Trying to project field that does not exist"
-              case v of
-                Inclusion True ->
-                  return $ Map.insert k ogTy acc
-                EObject nxtProjExp -> do
-                  res <- processInclusions nxtProjExp ogTy baseSch
-                  return $ Map.insert k res acc
-                exp -> do
-                  ty <- typeOfExpression baseSch exp
+              case m Map.!? k of
+                Nothing -> do
+                  ty <- typeOfExpression baseSch v
                   return $ Map.insert k ty acc
+                Just ogTy ->
+                  case v of
+                    Inclusion True ->
+                      return $ Map.insert k ogTy acc
+                    EObject nxtProjExp -> do
+                      res <- processInclusions nxtProjExp ogTy baseSch
+                      return $ Map.insert k res acc
+                    exp -> do
+                      ty <- typeOfExpression baseSch exp
+                      return $ Map.insert k ty acc
           )
           Map.empty
           (Map.toList projExp)

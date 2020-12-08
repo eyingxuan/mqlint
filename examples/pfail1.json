@@ -1,0 +1,5 @@
+[
+  {
+    "$project": { "firstName": 1, "lastName": 0 }
+  }
+]
