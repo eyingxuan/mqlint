@@ -1,17 +1,16 @@
 module ExpressionType (typeOfExpression) where
 
 import qualified Control.Monad as Monad
-import Control.Monad.Except (MonadError (throwError))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Schema (accessPossibleTys)
-import Types (BSON (..), BSONType (..), Exception, Expression (..), FieldPath (..), Index (..), Op (..), SchemaTy (..))
-import Utils (isSubtype)
+import Types (BSON (..), BSONType (..), Expression (..), FieldPath (..), Index (..), Op (..), SchemaTy (..), TypecheckResult)
+import Utils (isSubtype, throwErrorWithContext)
 
 sumT :: [BSONType] -> BSONType
 sumT = TSum . Set.fromList
 
-typeOfOp :: Op -> [BSONType] -> Exception BSONType
+typeOfOp :: Op -> [BSONType] -> TypecheckResult BSONType
 typeOfOp Add [TNumber, TNumber] = return TNumber
 typeOfOp Abs [TNumber] = return TNumber
 typeOfOp Ceil [TNumber] = return TNumber
@@ -19,10 +18,11 @@ typeOfOp Floor [TNumber] = return TNumber
 typeOfOp Avg [TArray TNumber] = return TNumber
 typeOfOp Max [TArray TNumber] = return TNumber
 typeOfOp Min [TArray TNumber] = return TNumber
-typeOfOp Eq [t1, t2] = if isSubtype t1 t2 || isSubtype t2 t1
-  then return TBool
-  else throwError ("Equality must check between identical types: " ++ show t1 ++ ", " ++ show t2)
-typeOfOp _ _ = throwError "Not acceptable parameters for operation."
+typeOfOp Eq [t1, t2] =
+  if isSubtype t1 t2 || isSubtype t2 t1
+    then return TBool
+    else throwErrorWithContext ("Equality must check between identical types: " ++ show t1 ++ ", " ++ show t2)
+typeOfOp _ _ = throwErrorWithContext "Not acceptable parameters for operation."
 
 -- typeOfOp :: Op -> ([BSONType], BSONType)
 -- typeOfOp Add = ([TNumber, TNumber], TNumber)
@@ -44,13 +44,13 @@ typeFromBson (Date _) = TDate
 typeFromBson (Boolean _) = TBool
 typeFromBson (ObjectId _) = TObjectId
 
-toFieldPath :: [String] -> Exception FieldPath
+toFieldPath :: [String] -> TypecheckResult FieldPath
 toFieldPath fs =
   if "\n" `elem` fs
-    then throwError "Inclusions cannot index into arrays."
+    then throwErrorWithContext "Inclusions cannot index into arrays."
     else return $ map ObjectIndex $ reverse fs
 
-typeOfExpression :: SchemaTy -> Expression -> Exception BSONType
+typeOfExpression :: SchemaTy -> Expression -> TypecheckResult BSONType
 typeOfExpression s (FP fp) = TSum . Set.fromList <$> accessPossibleTys fp s
 typeOfExpression s (EArray exps) =
   TArray . TSum . Set.fromList <$> mapM (typeOfExpression s) exps
@@ -62,7 +62,7 @@ typeOfExpression s (EObject obj) =
           (,) k <$> typeOfExpression s exp
       )
       (Map.toList obj)
-typeOfExpression _ (Inclusion i) = throwError "Inclusion cannot be typed"
+typeOfExpression _ (Inclusion i) = throwErrorWithContext "Inclusion cannot be typed"
 typeOfExpression s (Application op args) = do
   argsT <- mapM (typeOfExpression s) args
   typeOfOp op argsT

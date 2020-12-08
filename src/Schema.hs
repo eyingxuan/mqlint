@@ -5,15 +5,15 @@ import Control.Monad.Except (ExceptT, MonadError (throwError))
 import Control.Monad.Identity (Identity)
 import Data.Map.Internal (Map, delete, empty, insert, (!?))
 import qualified Data.Set as Set
-import Types (BSONType (..), Exception, FieldPath, Index (..), SchemaMap, SchemaTy (..))
-import Utils (fromBsonType, toBsonType, withErr)
+import Types (BSONType (..), FieldPath, Index (..), SchemaMap, SchemaTy (..), TypecheckResult)
+import Utils (fromBsonType, throwErrorWithContext, toBsonType, withErr)
 
-updateSchemaTy :: FieldPath -> (BSONType -> Exception BSONType) -> SchemaTy -> Exception SchemaTy
+updateSchemaTy :: FieldPath -> (BSONType -> TypecheckResult BSONType) -> SchemaTy -> TypecheckResult SchemaTy
 updateSchemaTy fp trans sch = do
   sty <- helper fp trans (toBsonType sch)
   fromBsonType sty
   where
-    helper :: FieldPath -> (BSONType -> Exception BSONType) -> BSONType -> Exception BSONType
+    helper :: FieldPath -> (BSONType -> TypecheckResult BSONType) -> BSONType -> TypecheckResult BSONType
     helper [] trans ty = trans ty
     helper (ArrayIndex : tl) trans (TArray ty) = do
       newT <- helper tl trans ty
@@ -27,20 +27,20 @@ updateSchemaTy fp trans sch = do
           )
           Set.empty
           tyl
-    helper (ArrayIndex : _) _ _ = throwError "Cannot array index into non-array type"
+    helper (ArrayIndex : _) _ _ = throwErrorWithContext "Cannot array index into non-array type"
     helper ((ObjectIndex s) : tl) trans (TObject m) = do
       fty <- withErr (m !? s) "Field name not found in object"
       transFty <- helper tl trans fty
       return $ TObject (insert s transFty m)
-    helper ((ObjectIndex _) : _) _ _ = throwError "Cannot object index into non-object type"
+    helper ((ObjectIndex _) : _) _ _ = throwErrorWithContext "Cannot object index into non-object type"
 
-removeSchemaPath :: FieldPath -> SchemaTy -> Exception SchemaTy
+removeSchemaPath :: FieldPath -> SchemaTy -> TypecheckResult SchemaTy
 removeSchemaPath fp sch = do
   sty <- helper fp (toBsonType sch)
   fromBsonType sty
   where
-    helper :: FieldPath -> BSONType -> Exception BSONType
-    helper [] _ = throwError "Cannot remove with empty field path"
+    helper :: FieldPath -> BSONType -> TypecheckResult BSONType
+    helper [] _ = throwErrorWithContext "Cannot remove with empty field path"
     helper fp@(ObjectIndex _ : _) (TSum s) =
       TSum
         <$> foldM
@@ -56,16 +56,16 @@ removeSchemaPath fp sch = do
         transTy <- helper tl fty
         return (TObject $ insert s transTy m)
       Nothing -> return $ TObject m
-    helper fp ty = throwError ("Cannot index object" ++ show fp ++ ", " ++ show ty)
+    helper fp ty = throwErrorWithContext ("Cannot index object" ++ show fp ++ ", " ++ show ty)
 
 -- insertion replaces current type at field path
-insertSchemaPath :: FieldPath -> BSONType -> SchemaTy -> Exception SchemaTy
+insertSchemaPath :: FieldPath -> BSONType -> SchemaTy -> TypecheckResult SchemaTy
 insertSchemaPath fp newTy sch = do
   sty <- helper fp newTy (toBsonType sch)
   fromBsonType sty
   where
-    helper :: FieldPath -> BSONType -> BSONType -> Exception BSONType
-    helper [] _ _ = throwError "Cannot insert with empty field path"
+    helper :: FieldPath -> BSONType -> BSONType -> TypecheckResult BSONType
+    helper [] _ _ = throwErrorWithContext "Cannot insert with empty field path"
     helper fp@(ObjectIndex _ : _) newTy (TSum s) =
       TSum
         <$> foldM
@@ -84,15 +84,15 @@ insertSchemaPath fp newTy sch = do
       Nothing -> do
         transTy <- helper tl newTy (TObject empty)
         return (TObject $ insert s transTy m)
-    helper _ _ _ = throwError "Cannot index non-object"
+    helper _ _ _ = throwErrorWithContext "Cannot index non-object"
 
-accessPossibleTys :: FieldPath -> SchemaTy -> Exception [BSONType]
-accessPossibleTys [] _ = throwError "No index provided"
+accessPossibleTys :: FieldPath -> SchemaTy -> TypecheckResult [BSONType]
+accessPossibleTys [] _ = throwErrorWithContext "No index provided"
 accessPossibleTys path (S l)
-  | Set.size l == 0 = throwError "Schema is empty"
+  | Set.size l == 0 = throwErrorWithContext "Schema is empty"
   | otherwise = helper path (TSum (Set.map TObject l))
   where
-    helper :: FieldPath -> BSONType -> Exception [BSONType]
+    helper :: FieldPath -> BSONType -> TypecheckResult [BSONType]
     helper [] ty = return [ty]
     helper path (TSum blist) =
       foldM
@@ -106,14 +106,14 @@ accessPossibleTys path (S l)
       fty <- withErr (m !? s) "Field name not found in object"
       helper tl fty
     helper (ArrayIndex : tl) (TArray t) = helper tl t
-    helper _ _ = throwError "Tried to index into non object"
+    helper _ _ = throwErrorWithContext "Tried to index into non object"
 
-narrowDiscUnion :: FieldPath -> (String -> Bool) -> SchemaTy -> Exception SchemaTy
+narrowDiscUnion :: FieldPath -> (String -> Bool) -> SchemaTy -> TypecheckResult SchemaTy
 narrowDiscUnion fp pred sch = do
   sty <- helper fp pred (toBsonType sch)
   fromBsonType sty
   where
-    helper :: FieldPath -> (String -> Bool) -> BSONType -> Exception BSONType
+    helper :: FieldPath -> (String -> Bool) -> BSONType -> TypecheckResult BSONType
     helper [ObjectIndex s] pred (TSum tyl) =
       TSum
         <$> foldM
@@ -123,7 +123,7 @@ narrowDiscUnion fp pred sch = do
                 case fty of
                   TConst s' -> if pred s' then return (Set.insert ty acc) else return acc
                   _ -> return $ Set.insert ty acc
-              _ -> throwError "Cannot object index sum type with non-object types"
+              _ -> throwErrorWithContext "Cannot object index sum type with non-object types"
           )
           Set.empty
           tyl
@@ -131,11 +131,11 @@ narrowDiscUnion fp pred sch = do
       newTy <- helper tl pred aty
       return $ TArray newTy
     helper fp@(ArrayIndex : _) pred (TSum tyl) = TSum . Set.fromList <$> mapM (helper fp pred) (Set.toList tyl)
-    helper (ArrayIndex : _) _ _ = throwError "Cannot array index into non-array type"
+    helper (ArrayIndex : _) _ _ = throwErrorWithContext "Cannot array index into non-array type"
     helper (ObjectIndex s : tl) pred (TObject m) = do
       fty <- withErr (m !? s) "Cannot find field"
       newFty <- helper tl pred fty
       return $ TObject (insert s newFty m)
     helper fp@(ObjectIndex _ : _) pred (TSum tyl) = TSum . Set.fromList <$> mapM (helper fp pred) (Set.toList tyl)
-    helper (ObjectIndex _ : _) _ _ = throwError "Cannot object index into non-object type"
+    helper (ObjectIndex _ : _) _ _ = throwErrorWithContext "Cannot object index into non-object type"
     helper [] _ ty = return ty

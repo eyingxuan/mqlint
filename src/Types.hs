@@ -11,19 +11,25 @@ module Types
     Accumulator (..),
     Expression (..),
     Op (..),
-    Exception,
+    TypecheckResult,
   )
 where
 
 import Control.Monad.Except (ExceptT)
 import Control.Monad.Identity (Identity)
+import Control.Monad.Reader (ReaderT)
 import Control.Monad.Writer (WriterT)
 import Data.Map.Internal (Map)
 import Data.Set (Set)
+import Text.PrettyPrint (Doc)
+
+type TypecheckTrace = Doc -> Doc
 
 type Context = Map String SchemaTy
 
 type Exception = WriterT [String] (ExceptT String Identity)
+
+type TypecheckResult = ReaderT (Context, TypecheckTrace) Exception
 
 data Index
   = ArrayIndex

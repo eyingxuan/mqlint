@@ -1,29 +1,49 @@
-module Utils (withErr, toBsonType, fromBsonType, isSubtype, flattenSchemaTy) where
+module Utils
+  ( withErr,
+    withContext,
+    toBsonType,
+    fromBsonType,
+    isSubtype,
+    flattenSchemaTy,
+    throwErrorWithContext,
+  )
+where
 
 import Control.Monad.Except (MonadError (throwError))
+import Control.Monad.Reader (MonadReader (ask), withReaderT)
+import Data.Bifunctor (second)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
-import Types (BSONType (..), Exception, SchemaMap (..), SchemaTy (..))
+import Text.PrettyPrint (Doc, nest, render, text, ($+$))
+import Types (BSONType (..), SchemaMap (..), SchemaTy (..), TypecheckResult)
 
 toBsonType :: SchemaTy -> BSONType
 toBsonType (S l) = TSum $ Set.map TObject l
 
-fromBsonType :: BSONType -> Exception SchemaTy
+fromBsonType :: BSONType -> TypecheckResult SchemaTy
 fromBsonType bty = case bty of
   TSum l -> do
     sty <-
       mapM
         ( \ty -> case ty of
             TObject m -> return m
-            _ -> throwError "Conversion error"
+            _ -> throwErrorWithContext "Conversion error"
         )
         (Set.toList l)
     return $ S (Set.fromList sty)
-  _ -> throwError "Conversion error"
+  _ -> throwErrorWithContext "Conversion error"
 
-withErr :: Maybe a -> String -> Exception a
+withErr :: Maybe a -> String -> TypecheckResult a
 withErr (Just x) _ = return x
-withErr Nothing msg = throwError msg
+withErr Nothing msg = throwErrorWithContext msg
+
+withContext :: TypecheckResult a -> Doc -> TypecheckResult a
+withContext m d = withReaderT (second (\prevDoc nxtDoc -> prevDoc d $+$ nest 2 nxtDoc)) m
+
+throwErrorWithContext :: String -> TypecheckResult a
+throwErrorWithContext s = do
+  (_, errorCtx) <- ask
+  throwError (render (errorCtx (text s)))
 
 isEmptySumType :: BSONType -> Bool
 isEmptySumType (TSum x) = Set.size x == 0
@@ -47,12 +67,12 @@ flattenBSONType (TObject m) =
 flattenBSONType (TArray t) = TArray $ flattenBSONType t
 flattenBSONType t = t
 
-flattenSchemaMap :: SchemaMap -> Exception SchemaMap
+flattenSchemaMap :: SchemaMap -> TypecheckResult SchemaMap
 flattenSchemaMap sch = case flattenBSONType (TObject sch) of
   TObject newSch -> return newSch
-  _ -> throwError "Something went wrong"
+  _ -> throwErrorWithContext "Something went wrong"
 
-flattenSchemaTy :: SchemaTy -> Exception SchemaTy
+flattenSchemaTy :: SchemaTy -> TypecheckResult SchemaTy
 flattenSchemaTy (S sch) = S . Set.fromList <$> mapM flattenSchemaMap (Set.toList sch)
 
 isSubtype :: BSONType -> BSONType -> Bool

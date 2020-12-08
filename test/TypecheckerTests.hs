@@ -7,15 +7,11 @@ import Control.Monad.Writer (runWriterT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Test.HUnit (Test (..), (~:), (~?=))
-import Typechecker (TypecheckResult, typecheck)
+import Typechecker (TypecheckResult, runTypechecker, typecheck)
 import Types (AST (..), BSONType (..), Expression (..), Index (..), SchemaTy (..), Stage (..))
 
 typecheckerTests :: Test
 typecheckerTests = TestList [testSimpleLookup, testSimpleProject]
-
-runTypechecker :: AST -> SchemaTy -> Map.Map String SchemaTy -> Either String (SchemaTy, [String])
-runTypechecker p sch db =
-  runIdentity (runExceptT (runWriterT (runReaderT (typecheck p sch) db)))
 
 s1 :: Map.Map String BSONType
 s1 = Map.fromList [("x", TStr), ("y", TStr)]

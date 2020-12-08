@@ -19,7 +19,7 @@ main = do
           case Map.lookup collectionName context of
             -- Just schema -> print pipeline
             Just schema -> case runTypechecker pipeline schema context of
-              Left error -> print error
+              Left error -> putStrLn error
               Right (resSchema, warnings) ->
                 print (pp resSchema)
             Nothing -> print (show context ++ "\n---\n" ++ show pipeline)
