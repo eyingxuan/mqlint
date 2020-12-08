@@ -56,5 +56,25 @@
         }
       }
     }
+  ],
+  "coll3": [
+    {
+      "type": "object",
+      "properties": {
+        "bankAcc": { "type": "number" },
+        "bankId": { "type": "number" },
+        "bankName": { "type": "string" },
+        "id": { "type": "string" },
+        "version": { "type": "v2" }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "bankAccount": { "type": "number" },
+        "id": { "type": "string" },
+        "version": { "type": "v1" }
+      }
+    }
   ]
 }

@@ -1,0 +1,12 @@
+[
+  {
+    "$lookup": {
+      "from": "coll3",
+      "localField": "$id",
+      "foreignField": "$id",
+      "as": "bank"
+    }
+  },
+  { "$match": { "$expr": { "$eq": ["$bank.version", "v1"] } } },
+  { "$project": { "id": "$id", "bankAcc": "$bank.bankAccount" } }
+]

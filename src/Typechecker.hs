@@ -68,7 +68,7 @@ processStage (Lookup foreignCol localFp foreignFp as) sch = do
         if isSubtype lty fty || isSubtype fty lty
           then
             let (S fsl, S lsl) = (foreignSch, sch)
-             in return (S (Set.fromList [Map.insert as (TObject fm) lm | fm <- Set.toList fsl, lm <- Set.toList lsl]))
+             in return (S (Set.fromList [Map.insert as (TSum (Set.map TObject fsl)) lm | lm <- Set.toList lsl]))
           else throwErrorWithContext "Local and foreign lookup fields do not match"
       _ -> throwErrorWithContext "not possible"
     else throwErrorWithContext "Local and foreign lookup fields do not match"
