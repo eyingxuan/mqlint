@@ -6,7 +6,26 @@
         "id": { "type": "string" },
         "firstName": { "type": "string" },
         "lastName": { "type": "string" },
-        "pets": { "type": "array", "items": { "type": "string" } }
+        "pets": {
+          "type": "array",
+          "items": {
+            "type": "sum",
+            "types": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" }
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "number" }
+                }
+              }
+            ]
+          }
+        }
       }
     }
   ],
