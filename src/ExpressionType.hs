@@ -3,6 +3,7 @@ module ExpressionType (typeOfExpression) where
 import qualified Control.Monad as Monad
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Printing (PP (..))
 import Schema (accessPossibleTys)
 import qualified Text.PrettyPrint as PP
 import Types (BSON (..), BSONType (..), Expression (..), FieldPath (..), Index (..), Op (..), SchemaTy (..), TypecheckResult)
@@ -52,7 +53,10 @@ toFieldPath fs =
     else return $ map ObjectIndex $ reverse fs
 
 typeOfExpression :: SchemaTy -> Expression -> TypecheckResult BSONType
-typeOfExpression s (FP fp) = TSum . Set.fromList <$> accessPossibleTys fp s
+typeOfExpression s (FP fp) =
+  withContext
+    (TSum . Set.fromList <$> accessPossibleTys fp s)
+    (PP.text ("Accessing field path " ++ show fp ++ " of schema ") PP.$+$ pp s)
 typeOfExpression s (EArray exps) =
   TArray . TSum . Set.fromList <$> mapM (typeOfExpression s) exps
 typeOfExpression _ (Lit bson) = return $ typeFromBson bson

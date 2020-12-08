@@ -129,7 +129,7 @@ processStage (Project m) sch = do
           ( \acc (k, v) -> do
               case m Map.!? k of
                 Nothing -> do
-                  ty <- withContext (typeOfExpression baseSch v) (PP.text ("Getting type of expression: " ++ show v))
+                  ty <- withContext (typeOfExpression baseSch v) (PP.text ("Inserting expression " ++ show v ++ " at " ++ show k))
                   return $ Map.insert k ty acc
                 Just ogTy ->
                   case v of
