@@ -47,18 +47,21 @@ isAllExclusion (EObject m) = do
 
 processStage :: Stage -> SchemaTy -> TypecheckResult SchemaTy
 processStage (Unwind fp) sch =
-  updateSchemaTy
-    fp
-    ( \ty -> case ty of
-        TArray x -> return x
-        _ -> throwErrorWithContext "Cannot unwind non-array type"
+  withContext
+    ( updateSchemaTy
+        fp
+        ( \ty -> case ty of
+            TArray x -> return x
+            _ -> throwErrorWithContext "Cannot unwind non-array type"
+        )
+        sch
     )
-    sch
+    (PP.text ("Unwinding field path: " ++ show fp))
 processStage (Lookup foreignCol localFp foreignFp as) sch = do
   (ctx, _) <- ask
   foreignSch <- withErr (ctx Map.!? foreignCol) "No such foreign collection"
-  localTys <- accessPossibleTys localFp sch
-  foreignTys <- accessPossibleTys foreignFp foreignSch
+  localTys <- withContext (accessPossibleTys localFp sch) (PP.text ("Accessing local field path: " ++ show localFp))
+  foreignTys <- withContext (accessPossibleTys foreignFp foreignSch) (PP.text ("Accessing foreign field path: " ++ show foreignFp))
   if length localTys == 1 && length foreignTys == 1
     then case (localTys, foreignTys) of
       ([lty], [fty]) ->
@@ -73,7 +76,7 @@ processStage (Facet m) sch = do
   newTy <-
     mapM
       ( \(k, v) -> do
-          facetTy <- typecheck v sch
+          facetTy <- withContext (typecheck v sch) (PP.text ("Typechecking field " ++ k ++ " with pipeline " ++ show v))
           return (k, toBsonType facetTy)
       )
       (Map.toList m)
@@ -85,7 +88,14 @@ processStage (Project m) sch = do
   if exclude
     then do
       l <- collectRemovals m []
-      foldM (flip removeSchemaPath) sch (map reverse l)
+      foldM
+        ( \acc fp ->
+            withContext
+              (removeSchemaPath fp acc)
+              (PP.text ("Removing field path " ++ show fp))
+        )
+        sch
+        (map reverse l)
     else do
       res <- processInclusions m (toBsonType sch) sch
       fromBsonType res
@@ -119,7 +129,7 @@ processStage (Project m) sch = do
           ( \acc (k, v) -> do
               case m Map.!? k of
                 Nothing -> do
-                  ty <- typeOfExpression baseSch v
+                  ty <- withContext (typeOfExpression baseSch v) (PP.text ("Getting type of expression: " ++ show v))
                   return $ Map.insert k ty acc
                 Just ogTy ->
                   case v of
@@ -129,7 +139,7 @@ processStage (Project m) sch = do
                       res <- processInclusions nxtProjExp ogTy baseSch
                       return $ Map.insert k res acc
                     exp -> do
-                      ty <- typeOfExpression baseSch exp
+                      ty <- withContext (typeOfExpression baseSch exp) (PP.text ("Getting type of expression: " ++ show exp))
                       return $ Map.insert k ty acc
           )
           Map.empty
@@ -157,12 +167,7 @@ getAccReturnT _ _ = throwErrorWithContext "Not proper argument type for accumula
 typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
 typecheck (Pipeline []) ty = flattenSchemaTy ty
 typecheck (Pipeline (hd : tl)) ty =
-  withContext
-    ( do
-        nextSch <- processStage hd ty
-        cleanSch <- flattenSchemaTy nextSch
-        typecheck (Pipeline tl) cleanSch
-    )
-    ( PP.text
-        ("Typechecking query" ++ show hd)
-    )
+  do
+    nextSch <- withContext (processStage hd ty) (PP.text ("Typechecking stage: " ++ show hd))
+    cleanSch <- flattenSchemaTy nextSch
+    typecheck (Pipeline tl) cleanSch

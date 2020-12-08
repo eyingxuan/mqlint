@@ -4,8 +4,9 @@ import qualified Control.Monad as Monad
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Schema (accessPossibleTys)
+import qualified Text.PrettyPrint as PP
 import Types (BSON (..), BSONType (..), Expression (..), FieldPath (..), Index (..), Op (..), SchemaTy (..), TypecheckResult)
-import Utils (isSubtype, throwErrorWithContext)
+import Utils (isSubtype, throwErrorWithContext, withContext)
 
 sumT :: [BSONType] -> BSONType
 sumT = TSum . Set.fromList

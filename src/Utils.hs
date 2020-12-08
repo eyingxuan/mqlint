@@ -38,7 +38,7 @@ withErr (Just x) _ = return x
 withErr Nothing msg = throwErrorWithContext msg
 
 withContext :: TypecheckResult a -> Doc -> TypecheckResult a
-withContext m d = withReaderT (second (\prevDoc nxtDoc -> prevDoc d $+$ nest 2 nxtDoc)) m
+withContext m d = withReaderT (second (\prevDoc nxtDoc -> prevDoc (d $+$ nest 2 nxtDoc))) m
 
 throwErrorWithContext :: String -> TypecheckResult a
 throwErrorWithContext s = do
