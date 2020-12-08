@@ -60,8 +60,8 @@ processStage (Unwind fp) sch =
 processStage (Lookup foreignCol localFp foreignFp as) sch = do
   (ctx, _) <- ask
   foreignSch <- withErr (ctx Map.!? foreignCol) "No such foreign collection"
-  localTys <- withContext (accessPossibleTys localFp sch) (PP.text ("Accessing local field path: " ++ show localFp))
-  foreignTys <- withContext (accessPossibleTys foreignFp foreignSch) (PP.text ("Accessing foreign field path: " ++ show foreignFp))
+  localTys <- Set.toList . Set.fromList <$> withContext (accessPossibleTys localFp sch) (PP.text ("Accessing local field path: " ++ show localFp))
+  foreignTys <- Set.toList . Set.fromList <$> withContext (accessPossibleTys foreignFp foreignSch) (PP.text ("Accessing foreign field path: " ++ show foreignFp))
   if length localTys == 1 && length foreignTys == 1
     then case (localTys, foreignTys) of
       ([lty], [fty]) ->
