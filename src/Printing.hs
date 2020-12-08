@@ -1,11 +1,12 @@
-module Printing where
+module Printing (PP (..)) where
 
-import Text.PrettyPrint (Doc)
-import qualified Text.PrettyPrint as PP
+import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.Map (Map)
-import Types (BSONType (..))
+import Text.PrettyPrint (Doc)
+import qualified Text.PrettyPrint as PP
+import Types (BSONType (..), SchemaTy (..))
+
 -- import Data.Sequence (mapWithIndex)
 
 -- data BSONType
@@ -25,16 +26,23 @@ class PP a where
   pp :: a -> Doc
 
 wrap :: String -> String -> [Doc] -> Doc
-wrap o c d = (if length d > 1
-              then PP.vcat
-              else PP.hsep)
-              $ [PP.text o] ++
-              map (\(i, doc) -> PP.nest 1 (
-                if i == length d - 1
+wrap o c d =
+  ( if length d > 1
+      then PP.vcat
+      else PP.hsep
+  )
+    $ [PP.text o]
+      ++ map
+        ( \(i, doc) ->
+            PP.nest
+              1
+              ( if i == length d - 1
                   then doc
                   else doc <> PP.text ","
-              )) (zip [0..] d)
-              ++ [PP.text c]
+              )
+        )
+        (zip [0 ..] d)
+      ++ [PP.text c]
 
 quote :: String -> Doc
 quote s = PP.text "\"" <> PP.text s <> PP.text "\""
@@ -64,17 +72,26 @@ instance PP BSONType where
   pp TDate = ppt "date"
   pp (TSum s) = objectify [keyvalify "type" (quote "sum"), keyvalify "types" (arrayify (pp <$> Set.toList s))]
   pp (TArray tarr) = objectify [keyvalify "type" (quote "sum"), keyvalify "items" (pp tarr)]
-  pp (TObject props) = objectify [
-      keyvalify "type" (quote "object"),
-      keyvalify "properties" (ppo props)
-    ]
+  pp (TObject props) =
+    objectify
+      [ keyvalify "type" (quote "object"),
+        keyvalify "properties" (ppo props)
+      ]
 
-ex = TObject $ Map.fromList [
-    ("version", TConst "v1"),
-    ("active", TBool),
-    ("name", TStr),
-    ("addresses", TArray TStr)
-  ]
+instance PP SchemaTy where
+  pp (S l) = case Set.toList l of
+    [ty] -> pp $ TObject ty
+    l -> pp $ TSum (Set.fromList (map TObject l))
+
+ex =
+  TObject $
+    Map.fromList
+      [ ("version", TConst "v1"),
+        ("active", TBool),
+        ("name", TStr),
+        ("addresses", TArray TStr)
+      ]
+
 -- >>> pp ex
 -- {
 --  "type": "object",
@@ -88,7 +105,3 @@ ex = TObject $ Map.fromList [
 --                 "version": {"type": "v1"}
 --                }
 -- }
-  
-
-
-

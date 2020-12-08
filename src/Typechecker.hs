@@ -145,7 +145,7 @@ getAccReturnT :: Accumulator -> BSONType -> TypecheckResult BSONType
 getAccReturnT _ _ = throwError "Not proper argument type for accumulator."
 
 typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
-typecheck (Pipeline []) ty = return ty
+typecheck (Pipeline []) ty = lift $ flattenSchemaTy ty
 typecheck (Pipeline (hd : tl)) ty = do
   nextSch <- processStage hd ty
   cleanSch <- lift $ flattenSchemaTy nextSch

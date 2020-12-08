@@ -1,15 +1,11 @@
 module Main where
 
+import qualified Data.Map as Map
 import MqlParser (getPipelineFromFile)
+import Printing (PP (..))
 import SchemaParser (getContextFromFile)
 import System.Environment (getArgs)
-import qualified Data.Map as Map
 import Typechecker (runTypechecker)
-
-ignore :: a -> ()
-ignore _ = ()
-
-
 
 main :: IO ()
 main = do
@@ -19,10 +15,13 @@ main = do
       ctx <- getContextFromFile schemaFile
       pipe <- getPipelineFromFile pipelineFile
       case (ctx, pipe) of
-        (Right context, Right pipeline) -> 
+        (Right context, Right pipeline) ->
           case Map.lookup collectionName context of
             -- Just schema -> print pipeline
-            Just schema -> print $ runTypechecker pipeline schema context
+            Just schema -> case runTypechecker pipeline schema context of
+              Left error -> print error
+              Right (resSchema, warnings) ->
+                print (pp resSchema)
             Nothing -> print (show context ++ "\n---\n" ++ show pipeline)
         (Left cerror, Left perror) -> print (cerror ++ "\n---\n" ++ perror)
         (Left cerror, _) -> print cerror
