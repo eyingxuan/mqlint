@@ -47,7 +47,6 @@ type SchemaMap = Map String BSONType
 
 newtype SchemaTy = S (Set SchemaMap) deriving (Eq, Show)
 
--- Should the Sum type be a set?
 data BSONType
   = TSum (Set BSONType)
   | TConst String
@@ -88,8 +87,6 @@ data Expression
   | EArray [Expression]
   | Application Op [Expression]
   deriving (Eq, Ord, Show)
-
--- data ProjectField = Inclusion Bool | NewField Expression
 
 data Stage
   = Match Expression

@@ -73,9 +73,9 @@ isSubtypeHelper (TArray ty1) (TArray ty2) = isSubtype ty1 ty2
 isSubtypeHelper (TSum s1) (TSum s2) =
   all
     ( \ty ->
-        any (`isSubtypeHelper` ty) s1
+        all (`isSubtypeHelper` ty) s2
     )
-    s2
+    s1
 isSubtypeHelper (TObject m1) (TObject m2) =
   Map.foldrWithKey
     ( \k v acc ->
