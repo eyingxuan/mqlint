@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c0bcea6024edfd23f54cfc5a684e20d3e13f8962498dcf5588a4f90f76bd9a12
+-- hash: a8fbfc9f2585f52f3e494c1e8e8b37a99f77c182916d1eb66852b225b49197c8
 
 name:           mongo-linter
 version:        0.1.0.0
@@ -38,6 +38,7 @@ library
   ghc-options: -fwarn-incomplete-patterns
   build-depends:
       HUnit
+    , QuickCheck
     , base >=4.7 && <5
     , containers
     , mtl
@@ -54,6 +55,7 @@ executable mongo-linter-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HUnit
+    , QuickCheck
     , base >=4.7 && <5
     , containers
     , mongo-linter
@@ -66,6 +68,7 @@ test-suite mongo-linter-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      ParserProperties
       SchemaTests
       TypecheckerTests
       Paths_mongo_linter
@@ -74,6 +77,7 @@ test-suite mongo-linter-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HUnit
+    , QuickCheck
     , base >=4.7 && <5
     , containers
     , mongo-linter
