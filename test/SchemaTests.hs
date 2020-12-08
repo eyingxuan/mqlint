@@ -1,12 +1,19 @@
 module SchemaTests (schemaTests) where
 
-import Control.Monad.Except (MonadError (throwError))
+import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
+import Control.Monad.Identity (Identity, runIdentity)
+import Control.Monad.Reader (MonadReader (ask), ReaderT, lift, runReaderT)
+import Control.Monad.Writer (MonadWriter (tell), runWriterT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Schema (accessPossibleTys, insertSchemaPath, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
 import Test.HUnit (Test (..), (~:), (~?=))
-import Types (BSONType (..), Index (..), SchemaTy (..))
+import Types (BSONType (..), Index (..), SchemaTy (..), TypecheckResult)
 import Utils (withErr)
+
+runResult :: TypecheckResult a -> Either String a
+runResult r =
+  fst <$> runIdentity (runExceptT (runWriterT (runReaderT r (Map.empty, id))))
 
 schemaTests :: Test
 schemaTests =
@@ -38,19 +45,19 @@ testDirectAccess :: Test
 testDirectAccess =
   "direct access schema"
     ~: TestList
-      [ accessPossibleTys [ObjectIndex "x"] s1 ~?= return [TStr],
-        accessPossibleTys [ObjectIndex "y"] s1 ~?= return [TNumber],
-        accessPossibleTys [ObjectIndex "x"] s2 ~?= return [TObject m1],
-        accessPossibleTys [ObjectIndex "z"] s2 ~?= return [TDate]
+      [ runResult (accessPossibleTys [ObjectIndex "x"] s1) ~?= return [TStr],
+        runResult (accessPossibleTys [ObjectIndex "y"] s1) ~?= return [TNumber],
+        runResult (accessPossibleTys [ObjectIndex "x"] s2) ~?= return [TObject m1],
+        runResult (accessPossibleTys [ObjectIndex "z"] s2) ~?= return [TDate]
       ]
 
 testNestedAccess :: Test
 testNestedAccess =
   "nested access schema"
     ~: TestList
-      [ accessPossibleTys [ObjectIndex "x", ObjectIndex "z"] s3 ~?= return [TDate],
-        accessPossibleTys [ObjectIndex "x", ObjectIndex "x"] s3 ~?= return [TObject m1],
-        accessPossibleTys [ObjectIndex "y", ObjectIndex "x"] s3 ~?= return [TStr]
+      [ runResult (accessPossibleTys [ObjectIndex "x", ObjectIndex "z"] s3) ~?= return [TDate],
+        runResult (accessPossibleTys [ObjectIndex "x", ObjectIndex "x"] s3) ~?= return [TObject m1],
+        runResult (accessPossibleTys [ObjectIndex "y", ObjectIndex "x"] s3) ~?= return [TStr]
       ]
 
 d1 :: Map.Map String BSONType
@@ -66,14 +73,18 @@ testSumTypeAccess :: Test
 testSumTypeAccess =
   "basic sum type access schema"
     ~: TestList
-      [ accessPossibleTys
-          [ ObjectIndex "z"
-          ]
-          s4
+      [ runResult
+          ( accessPossibleTys
+              [ ObjectIndex "z"
+              ]
+              s4
+          )
           ~?= return [TNumber, TDate],
-        accessPossibleTys
-          [ObjectIndex "x"]
-          s4
+        runResult
+          ( accessPossibleTys
+              [ObjectIndex "x"]
+              s4
+          )
           ~?= throwError "Field name not found in object"
       ]
 
@@ -90,13 +101,15 @@ testUpdateTy :: Test
 testUpdateTy =
   "update type schema"
     ~: TestList
-      [ updateSchemaTy
-          [ObjectIndex "x"]
-          ( \b -> case b of
-              TArray t -> return t
-              _ -> throwError "Cannot unwind non-array type"
+      [ runResult
+          ( updateSchemaTy
+              [ObjectIndex "x"]
+              ( \b -> case b of
+                  TArray t -> return t
+                  _ -> throwError "Cannot unwind non-array type"
+              )
+              s5
           )
-          s5
           ~?= return
             ( S
                 ( Set.fromList
@@ -120,9 +133,13 @@ testTypeDiscrimination :: Test
 testTypeDiscrimination =
   "type discrimination schema"
     ~: TestList
-      [ narrowDiscUnion [ObjectIndex "v"] (== "version1") s4
+      [ runResult
+          ( narrowDiscUnion [ObjectIndex "v"] (== "version1") s4
+          )
           ~?= return (S (Set.fromList [d1])),
-        narrowDiscUnion [ObjectIndex "addr", ObjectIndex "t"] (== "long") s6
+        runResult
+          ( narrowDiscUnion [ObjectIndex "addr", ObjectIndex "t"] (== "long") s6
+          )
           ~?= return (S (Set.fromList [Map.fromList [("person", TStr), ("addr", TSum (Set.fromList [TObject d6]))]]))
       ]
 
@@ -130,12 +147,16 @@ testRemoveSchemaType :: Test
 testRemoveSchemaType =
   "remove arbitrary nested field from schema"
     ~: TestList
-      [ removeSchemaPath [ObjectIndex "v"] s5
+      [ runResult
+          ( removeSchemaPath [ObjectIndex "v"] s5
+          )
           ~?= return
             ( S
                 (Set.fromList [Map.fromList [("x", TArray TNumber)], Map.fromList [("x", TArray TDate)]])
             ),
-        removeSchemaPath [ObjectIndex "x", ObjectIndex "x"] s3
+        runResult
+          ( removeSchemaPath [ObjectIndex "x", ObjectIndex "x"] s3
+          )
           ~?= return
             ( S
                 ( Set.fromList
