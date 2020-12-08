@@ -50,7 +50,7 @@ genBSONType n = frequency (map (\t -> (1, pure t)) rootTypes ++ [
 
 genSchemaMap :: Int -> Gen SchemaMap
 genSchemaMap 0 = return Map.empty
-genSchemaMap n = Map.fromList <$> (zip <$> vectorOf n genField <*> listOf (genBSONType n))
+genSchemaMap n = Map.fromList <$> (zip <$> sized genField <*> listOf (genBSONType n))
 
 genSchemaTy :: Int -> Gen SchemaTy
 genSchemaTy 0 = return $ S Set.empty
