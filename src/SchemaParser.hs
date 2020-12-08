@@ -1,4 +1,4 @@
-module SchemaParser (getContextFromFile) where
+module SchemaParser (getContextFromFile, parseSchemaTy) where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -60,6 +60,12 @@ makeSchemaTop :: JSON -> TransformResult SchemaTy
 makeSchemaTop (JArray l) = S . Set.fromList <$> mapM makeSchema l
 makeSchemaTop o@(JObject _) = S . Set.singleton <$> makeSchema o
 makeSchemaTop _ = Left "Schema must be an object or array of possible schemas."
+
+parseSchemaTy :: String -> TransformResult SchemaTy
+parseSchemaTy contents = do
+  case parseJson contents of
+    Right json -> makeSchemaTop json
+    Left x -> Left (show x)
 
 makeContext :: JSON -> TransformResult Context
 makeContext (JObject o) = mapM makeSchemaTop o

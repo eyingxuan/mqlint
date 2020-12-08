@@ -1,4 +1,4 @@
-module Printing (PP (..)) where
+module Printing (PP (..), indented, oneLine) where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -71,7 +71,7 @@ instance PP BSONType where
   pp TStr = ppt "string"
   pp TDate = ppt "date"
   pp (TSum s) = objectify [keyvalify "type" (quote "sum"), keyvalify "types" (arrayify (pp <$> Set.toList s))]
-  pp (TArray tarr) = objectify [keyvalify "type" (quote "sum"), keyvalify "items" (pp tarr)]
+  pp (TArray tarr) = objectify [keyvalify "type" (quote "array"), keyvalify "items" (pp tarr)]
   pp (TObject props) =
     objectify
       [ keyvalify "type" (quote "object"),
@@ -81,7 +81,13 @@ instance PP BSONType where
 instance PP SchemaTy where
   pp (S l) = case Set.toList l of
     [ty] -> pp $ TObject ty
-    l -> pp $ TSum (Set.fromList (map TObject l))
+    l -> arrayify (map (pp . TObject) l)
+
+oneLine :: PP a => a -> String
+oneLine = PP.renderStyle (PP.style {PP.mode = PP.OneLineMode}) . pp
+
+indented :: PP a => a -> String
+indented = PP.render . pp
 
 ex =
   TObject $
