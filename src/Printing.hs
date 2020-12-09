@@ -115,6 +115,8 @@ instance PP Op where
   pp Min = PP.text "$min"
   pp Max = PP.text "$max"
   pp Eq = PP.text "$eq"
+  pp Concat = PP.text "$concat"
+  pp ConcatArrays = PP.text "$concatArrays"
 
 instance PP Accumulator where
   pp AAvg = PP.text "$avg"

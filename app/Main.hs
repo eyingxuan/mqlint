@@ -6,6 +6,7 @@ import Printing (PP (..))
 import SchemaParser (getContextFromFile)
 import System.Environment (getArgs)
 import Typechecker (runTypechecker)
+import Control.Monad (forM_)
 
 main :: IO ()
 main = do
@@ -22,8 +23,10 @@ main = do
               Left error -> do
                 putStrLn "Error found!"
                 putStrLn error
-              Right (resSchema, warnings) ->
+              Right (resSchema, warnings) -> do
                 print (pp resSchema)
+                putStrLn "\n---\nWarnings:\n"
+                forM_ warnings putStrLn
             Nothing -> print (show context ++ "\n---\n" ++ show pipeline)
         (Left cerror, Left perror) -> print (cerror ++ "\n---\n" ++ perror)
         (Left cerror, _) -> print cerror

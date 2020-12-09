@@ -12,6 +12,11 @@ import Utils (isSubtype, throwErrorWithContext, withContext)
 sumT :: [BSONType] -> BSONType
 sumT = TSum . Set.fromList
 
+maybeT :: String -> Maybe a -> TypecheckResult a
+maybeT err x = case x of
+  Just z -> return z
+  Nothing -> throwErrorWithContext err
+
 typeOfOp :: Op -> [BSONType] -> TypecheckResult BSONType
 typeOfOp Add [TNumber, TNumber] = return TNumber
 typeOfOp Abs [TNumber] = return TNumber
@@ -24,16 +29,31 @@ typeOfOp Eq [t1, t2] =
   if isSubtype t1 t2 || isSubtype t2 t1
     then return TBool
     else throwErrorWithContext ("Equality must check between identical types: " ++ oneLine t1 ++ ", " ++ oneLine t2)
-typeOfOp _ _ = throwErrorWithContext "Not acceptable parameters for operation."
-
--- typeOfOp :: Op -> ([BSONType], BSONType)
--- typeOfOp Add = ([TNumber, TNumber], TNumber)
--- typeOfOp Abs = ([TNumber], TNumber)
--- typeOfOp Ceil = ([TNumber], TNumber)
--- typeOfOp Floor = ([TNumber], TNumber)
--- typeOfOp Avg = ([TArray TNumber], TNumber)
--- typeOfOp Min = ([TArray TNumber], TNumber)
--- typeOfOp Max = ([TArray TNumber], TNumber)
+typeOfOp ArrayToObject [TArray (TObject m)] = do
+  kT <- maybeT "Cannot find type of key" (Map.lookup "k" m)
+  vT <- maybeT "Cannot find type of value" (Map.lookup "v" m)
+  -- TODO: I think this is not expressable in our type system, keys are variable based on input docs
+  if kT /= TStr then throwErrorWithContext "Key must be a string" else undefined
+typeOfOp ObjectToArray [TObject m] = do
+  let types = snd <$> Map.toList m
+  return $ TArray (TObject (Map.fromList [
+      ("k", TStr)
+    , ("v", sumT types)
+    ]))
+typeOfOp ConcatArrays [TArray (TArray t)] = return $ TArray t
+typeOfOp Concat [TArray TStr] = return TStr
+typeOfOp Cond [TBool, t1, t2] = return (sumT [t1, t2])
+typeOfOp Convert [TObject m] = do
+  from <- maybeT "Cannot get input expression" (Map.lookup "input" m)
+  to <- maybeT "Cannot get to expression" (Map.lookup "to" m)
+  let onError = Map.lookup "onError" m
+  let onNull = Map.lookup "onNull" m
+  throwErrorWithContext "Not fully defined"
+typeOfOp IndexOfArray [TArray t1, t2] = if isSubtype t1 t2 || isSubtype t2 t1
+                                        then return TNumber
+                                        else throwErrorWithContext "Cannot search for given element type in given array."
+  
+typeOfOp op args = throwErrorWithContext ("Parameters `" ++ show args ++"` not acceptable for operation " ++ oneLine op)
 
 typeFromBson :: BSON -> BSONType
 typeFromBson (Number _) = TNumber

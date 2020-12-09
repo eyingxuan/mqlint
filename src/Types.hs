@@ -75,6 +75,13 @@ data Op
   | Min
   | Max
   | Eq
+  | ArrayToObject
+  | ObjectToArray
+  | ConcatArrays
+  | Concat
+  | Cond
+  | Convert
+  | IndexOfArray
   deriving (Eq, Ord, Show)
 
 data Accumulator

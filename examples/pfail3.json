@@ -8,5 +8,5 @@
     }
   },
   { "$unwind": "$addr" },
-  { "$project": { "firstName": 1, "zip": "$addr.address.zip" } }
+  { "$project": { "firstName": 1, "zip": "$addr.address.zip", "_id": 0} }
 ]

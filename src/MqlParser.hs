@@ -31,6 +31,12 @@ operatorOf "$ceil" = Just Ceil
 operatorOf "$floor" = Just Floor
 operatorOf "$avg" = Just Avg
 operatorOf "$eq" = Just Eq
+operatorOf "$arrayToObject" = Just ArrayToObject
+operatorOf "$objectToArray" = Just ObjectToArray
+operatorOf "$concatArrays" = Just ConcatArrays
+operatorOf "$concat" = Just Concat
+operatorOf "$cond" = Just Cond
+operatorOf "$indexOfArray" = Just IndexOfArray
 operatorOf _ = Nothing
 
 singleton :: a -> [a]

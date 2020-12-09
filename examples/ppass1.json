@@ -5,7 +5,7 @@
   {
     "$match": {
       "$expr": {
-        "$eq": ["$address", { "addr": "hello", "zip": { "$literal": 1234 } }]
+        "$eq": ["$address", { "addr": "hello", "zip": { "$literal": 12345 } }]
       }
     }
   }
