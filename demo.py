@@ -58,7 +58,13 @@ def runAggregation(filename, coll, client):
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
-    print("add a command!")
+    print("""
+    usage:
+    python demo.py fill
+      - fill collections with fake data
+    python demo.py run <pipeline.json> <collectionName>
+      - run the specified pipeline on the given collection.
+    """)
     exit(1)
   command = sys.argv[1]
   client = MongoClient()
