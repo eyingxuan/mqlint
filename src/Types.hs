@@ -83,6 +83,8 @@ data Accumulator
   | Last
   | AMin
   | AMax
+  | Push
+  | Sum
   deriving (Eq, Ord, Show)
 
 data Expression

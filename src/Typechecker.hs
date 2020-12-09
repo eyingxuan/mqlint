@@ -160,9 +160,15 @@ processStage (Group groupByExpr accumulations) schema = do
   let newSchema = Map.insert "_id" idType returnTypes
   return $ S $ Set.singleton newSchema
 
--- TODO: Add in accumulator types.
 getAccReturnT :: Accumulator -> BSONType -> TypecheckResult BSONType
-getAccReturnT _ _ = throwErrorWithContext "Not proper argument type for accumulator."
+getAccReturnT AAvg TNumber = return TNumber
+getAccReturnT First a = return a
+getAccReturnT Last a = return a
+getAccReturnT AMin TNumber = return TNumber
+getAccReturnT AMax TNumber = return TNumber
+getAccReturnT Push t = return $ TArray t
+getAccReturnT Sum TNumber = return TNumber
+getAccReturnT acc t = throwErrorWithContext $ "Not proper argument type " ++ show t ++ "for accumulator " ++ show acc
 
 typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
 typecheck (Pipeline []) ty = flattenSchemaTy ty
