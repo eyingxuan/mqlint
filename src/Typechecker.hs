@@ -8,9 +8,9 @@ import Control.Monad.Writer (MonadWriter (tell), runWriterT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import ExpressionType (typeOfExpression)
+import Printing (oneLine)
 import Schema (accessPossibleTys, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
 import qualified Text.PrettyPrint as PP
-import Printing (oneLine)
 import Types
   ( AST (..),
     Accumulator (..),
@@ -84,22 +84,24 @@ processStage (Facet m) sch = do
   return $ S (Set.fromList [Map.fromList newTy])
 
 -- support short-hand field path accesses?
-processStage (Project m) sch = do
-  exclude <- isAllExclusion (EObject m)
-  if exclude
-    then do
-      l <- collectRemovals m []
-      foldM
-        ( \acc fp ->
-            withContext
-              (removeSchemaPath fp acc)
-              (PP.text ("Removing field path " ++ oneLine (FP fp)))
-        )
-        sch
-        (map reverse l)
-    else do
-      res <- processInclusions m (toBsonType sch) sch
-      fromBsonType res
+processStage (Project ogM) sch =
+  let m = Map.delete "_id" ogM
+   in do
+        exclude <- isAllExclusion (EObject m)
+        if exclude
+          then do
+            l <- collectRemovals m []
+            foldM
+              ( \acc fp ->
+                  withContext
+                    (removeSchemaPath fp acc)
+                    (PP.text ("Removing field path " ++ oneLine (FP fp)))
+              )
+              sch
+              (map reverse l)
+          else do
+            res <- processInclusions m (toBsonType sch) sch
+            fromBsonType res
   where
     collectRemovals :: Map.Map String Expression -> FieldPath -> TypecheckResult [FieldPath]
     collectRemovals m fp =

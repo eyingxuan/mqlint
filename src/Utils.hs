@@ -5,6 +5,7 @@ module Utils
     fromBsonType,
     isSubtype,
     flattenSchemaTy,
+    flattenBSONType,
     throwErrorWithContext,
   )
 where
@@ -49,12 +50,25 @@ isEmptySumType :: BSONType -> Bool
 isEmptySumType (TSum x) = Set.size x == 0
 isEmptySumType _ = False
 
+extractArrayType :: Set.Set BSONType -> Maybe BSONType
+extractArrayType s =
+  TArray . flattenBSONType . TSum . Set.fromList
+    <$> mapM
+      ( \ty -> case ty of
+          TArray aty -> Just $ flattenBSONType aty
+          _ -> Nothing
+      )
+      (Set.toList s)
+
 flattenBSONType :: BSONType -> BSONType
 flattenBSONType (TSum x) =
-  let newTs = map flattenBSONType (Set.toList x)
-   in case filter (not . isEmptySumType) newTs of
-        [t] -> t
-        _ -> TSum x
+  case extractArrayType x of
+    Just ty -> ty
+    Nothing ->
+      let newTs = map flattenBSONType (Set.toList x)
+       in case filter (not . isEmptySumType) newTs of
+            [t] -> t
+            _ -> TSum x
 flattenBSONType (TObject m) =
   TObject $
     Map.foldrWithKey
