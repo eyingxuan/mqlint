@@ -9,8 +9,8 @@
         {
           "$lookup": {
             "from": "coll1",
-            "localField": "$id",
-            "foreignField": "$id",
+            "localField": "id",
+            "foreignField": "id",
             "as": "personalInfo"
           }
         },

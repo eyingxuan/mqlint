@@ -66,6 +66,11 @@ parseStage m (JObject o) = case Map.toList o of
   _ -> Left "Stage must only have one key."
 parseStage _ _ = Left "Stage must be an object."
 
+getFieldPathWithoutDollar (JStr s) = case parse fieldPathP "" ("$" ++ s) of
+  Left _ -> Left "error parsing fieldpath"
+  Right x -> Right x
+getFieldPathWithoutDollar _ = Left "Fieldpath must be a JSON string."
+
 getFieldPath (JStr s) = case parse fieldPathP "" s of
   Left _ -> Left "error parsing fieldpath"
   Right x -> Right x
@@ -98,8 +103,8 @@ makeStage =
         withObj
           ( \o ->
               Lookup <$> getStringValue "from" o
-                <*> (getValue "localField" o >>= getFieldPath)
-                <*> (getValue "foreignField" o >>= getFieldPath)
+                <*> (getValue "localField" o >>= getFieldPathWithoutDollar)
+                <*> (getValue "foreignField" o >>= getFieldPathWithoutDollar)
                 <*> getStringValue "as" o
           )
       ),

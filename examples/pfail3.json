@@ -2,8 +2,8 @@
   {
     "$lookup": {
       "from": "coll2",
-      "localField": "$id",
-      "foreignField": "$id",
+      "localField": "id",
+      "foreignField": "id",
       "as": "addr"
     }
   },
