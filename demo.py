@@ -37,18 +37,36 @@ def makeColl2Objectv2(id):
     }
   }
 
+def makeColl3Objectv1(id):
+  return {
+    "version": "v1",
+    "id": id,
+    "bankAccount": fake.iban()
+  }
+
+def makeColl3Objectv2(id):
+  return {
+    "version": "v2",
+    "id": id, 
+    "bankName": fake.company(),
+    "bankId": fake.bban()
+  }
+
 def makeEntities():
   ssn = fake.ssn()
   v2 = random() < .5
-  return makeColl1Object(ssn), makeColl2Objectv2(ssn) if v2 else makeColl2Objectv1(ssn)
+  v3 = random() < .5
+  return makeColl1Object(ssn), makeColl2Objectv2(ssn) if v2 else makeColl2Objectv1(ssn), makeColl3Objectv1(ssn) if v3 else makeColl3Objectv2(ssn)
 
-def fillDB(coll1, coll2):
+def fillDB(coll1, coll2, coll3):
   coll1.delete_many({})
   coll2.delete_many({})
+  coll3.delete_many({})
   for _ in range(100):
-    doc1, doc2 = makeEntities()
+    doc1, doc2, doc3 = makeEntities()
     coll1.insert_one(doc1)
     coll2.insert_one(doc2)
+    coll3.insert_one(doc3)
 
 def runAggregation(filename, coll, client):
   pipeline = json.load(open(filename))
@@ -70,9 +88,10 @@ if __name__ == '__main__':
   client = MongoClient()
   coll1 = client.test.coll1
   coll2 = client.test.coll2
+  coll3 = client.test.coll3
   if command == 'fill':
     print("filling db...")
-    fillDB(coll1, coll2)
+    fillDB(coll1, coll2, coll3)
   elif command == 'run':
     if len(sys.argv) < 4:
       print("you need a pipeline and a collection to run!")
