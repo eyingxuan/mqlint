@@ -3,7 +3,7 @@ module ExpressionType (typeOfExpression) where
 import qualified Control.Monad as Monad
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Printing (PP (..))
+import Printing (PP (..), oneLine)
 import Schema (accessPossibleTys)
 import qualified Text.PrettyPrint as PP
 import Types (BSON (..), BSONType (..), Expression (..), FieldPath (..), Index (..), Op (..), SchemaTy (..), TypecheckResult)
@@ -23,7 +23,7 @@ typeOfOp Min [TArray TNumber] = return TNumber
 typeOfOp Eq [t1, t2] =
   if isSubtype t1 t2 || isSubtype t2 t1
     then return TBool
-    else throwErrorWithContext ("Equality must check between identical types: " ++ show t1 ++ ", " ++ show t2)
+    else throwErrorWithContext ("Equality must check between identical types: " ++ oneLine t1 ++ ", " ++ oneLine t2)
 typeOfOp _ _ = throwErrorWithContext "Not acceptable parameters for operation."
 
 -- typeOfOp :: Op -> ([BSONType], BSONType)
@@ -56,7 +56,7 @@ typeOfExpression :: SchemaTy -> Expression -> TypecheckResult BSONType
 typeOfExpression s (FP fp) =
   withContext
     (TSum . Set.fromList <$> accessPossibleTys fp s)
-    (PP.text ("Accessing field path " ++ show fp ++ " of schema ") PP.$+$ pp s)
+    (PP.text ("Accessing field path " ++ oneLine (FP fp) ++ " of schema ") PP.$+$ pp s)
 typeOfExpression s (EArray exps) =
   TArray . TSum . Set.fromList <$> mapM (typeOfExpression s) exps
 typeOfExpression _ (Lit bson) = return $ typeFromBson bson

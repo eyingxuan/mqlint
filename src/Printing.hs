@@ -15,7 +15,8 @@ import Types (
   Expression (..),
   Stage (..),
   AST (..),
-  Index (..)
+  Index (..),
+  FieldPath
   )
 
 -- import Data.Sequence (mapWithIndex)
@@ -128,18 +129,46 @@ instance PP Index where
   pp ArrayIndex = PP.text "0"
   pp (ObjectIndex s) = PP.text s
 
+withoutDollar :: [Index] -> Doc
+withoutDollar fp = foldMap id (intersperse (PP.text ".") (pp <$> fp))
+
+withDollar :: [Index] -> Doc
+withDollar fp = PP.text "$" <> withoutDollar fp
+
 instance PP Expression where
-  pp (FP fp) = foldMap id (intersperse (PP.text ".") (pp <$> fp))
+  pp (FP fp) = withDollar fp
   pp (Inclusion True) = PP.text "1"
   pp (Inclusion False) = PP.text "0"
-  pp (Lit bson) = pp bson
+  pp (Lit bson) = pp bson -- TODO: determine when we need a `$literal` wrapper.
   pp (EArray arr) = arrayify (pp <$> arr)
   pp (EObject obj) = ppo obj
   pp (Application op exprs) = ppo (Map.fromList [(PP.render (pp op), EArray exprs)])
 
+singleO k v = ppo $ Map.singleton k v
+
+instance PP Stage where
+  pp (Match exp) = singleO "$match" (EObject (Map.singleton "$expr" exp))
+  -- pp (Match exp) singleO "$match" (EObject (Map.singleton "$expr" exp))
+  pp (Unwind fp) = singleO "$unwind" (FP fp)
+  pp (Lookup from lf ff as) = singleO "$group" (EObject (Map.fromList [
+      ("from", Lit (Str from))
+    , ("localField", Lit (Str (renderOneLine (withoutDollar lf))))
+    , ("foreignField", Lit (Str (renderOneLine (withoutDollar ff))))
+    , ("as", Lit (Str as))
+    ]))
+  pp (Facet pipelines) = objectify [keyvalify "$facet" (ppo pipelines)]
+  pp (Project fields) = singleO "$project" (EObject fields)
+  pp (Group groupBy accumulators) = singleO "$group" (
+    EObject (Map.fromList (("_id", groupBy) : map (\(k, acc, exp) -> (k, EObject (Map.singleton (PP.render (pp acc)) exp))) accumulators)))
+
+instance PP AST where
+  pp (Pipeline stages) = arrayify $ pp <$> stages
+
+renderOneLine :: Doc -> String
+renderOneLine = PP.renderStyle (PP.style {PP.mode = PP.OneLineMode})
 
 oneLine :: PP a => a -> String
-oneLine = PP.renderStyle (PP.style {PP.mode = PP.OneLineMode}) . pp
+oneLine = renderOneLine . pp
 
 indented :: PP a => a -> String
 indented = PP.render . pp

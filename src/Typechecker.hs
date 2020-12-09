@@ -10,6 +10,7 @@ import qualified Data.Set as Set
 import ExpressionType (typeOfExpression)
 import Schema (accessPossibleTys, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
 import qualified Text.PrettyPrint as PP
+import Printing (oneLine)
 import Types
   ( AST (..),
     Accumulator (..),
@@ -56,12 +57,12 @@ processStage (Unwind fp) sch =
         )
         sch
     )
-    (PP.text ("Unwinding field path: " ++ show fp))
+    (PP.text ("Unwinding field path: " ++ oneLine (FP fp)))
 processStage (Lookup foreignCol localFp foreignFp as) sch = do
   (ctx, _) <- ask
   foreignSch <- withErr (ctx Map.!? foreignCol) "No such foreign collection"
-  localTys <- Set.toList . Set.fromList <$> withContext (accessPossibleTys localFp sch) (PP.text ("Accessing local field path: " ++ show localFp))
-  foreignTys <- Set.toList . Set.fromList <$> withContext (accessPossibleTys foreignFp foreignSch) (PP.text ("Accessing foreign field path: " ++ show foreignFp))
+  localTys <- Set.toList . Set.fromList <$> withContext (accessPossibleTys localFp sch) (PP.text ("Accessing local field path: " ++ oneLine (FP localFp)))
+  foreignTys <- Set.toList . Set.fromList <$> withContext (accessPossibleTys foreignFp foreignSch) (PP.text ("Accessing foreign field path: " ++ oneLine (FP foreignFp)))
   if length localTys == 1 && length foreignTys == 1
     then case (localTys, foreignTys) of
       ([lty], [fty]) ->
@@ -76,7 +77,7 @@ processStage (Facet m) sch = do
   newTy <-
     mapM
       ( \(k, v) -> do
-          facetTy <- withContext (typecheck v sch) (PP.text ("Typechecking field " ++ k ++ " with pipeline " ++ show v))
+          facetTy <- withContext (typecheck v sch) (PP.text ("Typechecking field " ++ k ++ " with pipeline " ++ oneLine v))
           return (k, toBsonType facetTy)
       )
       (Map.toList m)
@@ -92,7 +93,7 @@ processStage (Project m) sch = do
         ( \acc fp ->
             withContext
               (removeSchemaPath fp acc)
-              (PP.text ("Removing field path " ++ show fp))
+              (PP.text ("Removing field path " ++ oneLine (FP fp)))
         )
         sch
         (map reverse l)
@@ -129,7 +130,7 @@ processStage (Project m) sch = do
           ( \acc (k, v) -> do
               case m Map.!? k of
                 Nothing -> do
-                  ty <- withContext (typeOfExpression baseSch v) (PP.text ("Inserting expression " ++ show v ++ " at " ++ show k))
+                  ty <- withContext (typeOfExpression baseSch v) (PP.text ("Inserting expression " ++ oneLine v ++ " at " ++ show k))
                   return $ Map.insert k ty acc
                 Just ogTy ->
                   case v of
@@ -139,7 +140,7 @@ processStage (Project m) sch = do
                       res <- processInclusions nxtProjExp ogTy baseSch
                       return $ Map.insert k res acc
                     exp -> do
-                      ty <- withContext (typeOfExpression baseSch exp) (PP.text ("Getting type of expression: " ++ show exp))
+                      ty <- withContext (typeOfExpression baseSch exp) (PP.text ("Getting type of expression: " ++ oneLine exp))
                       return $ Map.insert k ty acc
           )
           Map.empty
@@ -168,12 +169,12 @@ getAccReturnT AMin TNumber = return TNumber
 getAccReturnT AMax TNumber = return TNumber
 getAccReturnT Push t = return $ TArray t
 getAccReturnT Sum TNumber = return TNumber
-getAccReturnT acc t = throwErrorWithContext $ "Not proper argument type " ++ show t ++ "for accumulator " ++ show acc
+getAccReturnT acc t = throwErrorWithContext $ "Not proper argument type " ++ oneLine t ++ "for accumulator " ++ oneLine acc
 
 typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
 typecheck (Pipeline []) ty = flattenSchemaTy ty
 typecheck (Pipeline (hd : tl)) ty =
   do
-    nextSch <- withContext (processStage hd ty) (PP.text ("Typechecking stage: " ++ show hd))
+    nextSch <- withContext (processStage hd ty) (PP.text ("Typechecking stage: " ++ oneLine hd))
     cleanSch <- flattenSchemaTy nextSch
     typecheck (Pipeline tl) cleanSch
