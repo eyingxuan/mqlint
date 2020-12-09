@@ -6,5 +6,7 @@
       "foreignField": "id",
       "as": "addr"
     }
-  }
+  },
+  { "$match": { "$expr": { "$eq": ["$addr.address.version", "v2"] } } },
+  { "$project": { "firstName": 1, "zip": "$addr.address.zip" } }
 ]
