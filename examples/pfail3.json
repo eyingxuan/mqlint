@@ -7,5 +7,6 @@
       "as": "addr"
     }
   },
+  { "$unwind": "$addr" },
   { "$project": { "firstName": 1, "zip": "$addr.address.zip" } }
 ]
