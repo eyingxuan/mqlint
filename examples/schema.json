@@ -61,7 +61,6 @@
     {
       "type": "object",
       "properties": {
-        "bankAcc": { "type": "number" },
         "bankId": { "type": "number" },
         "bankName": { "type": "string" },
         "id": { "type": "string" },
