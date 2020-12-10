@@ -3,14 +3,14 @@ module Schema (accessPossibleTys, narrowDiscUnion, updateSchemaTy, insertSchemaP
 import Control.Monad (filterM, foldM, mapM)
 import Control.Monad.Except (ExceptT, MonadError (throwError))
 import Control.Monad.Identity (Identity)
-import Control.Monad.Writer (MonadWriter(tell))
-import Control.Monad.Reader (MonadReader(ask))
+import Control.Monad.Reader (MonadReader (ask))
+import Control.Monad.Writer (MonadWriter (tell))
 import Data.Map.Internal (Map, delete, empty, insert, member, (!?))
 import qualified Data.Set as Set
-import Types (BSONType (..), FieldPath, Index (..), SchemaMap, SchemaTy (..), TypecheckResult)
-import Utils (fromBsonType, throwErrorWithContext, toBsonType, withErr)
 import Printing (oneLine)
 import qualified Text.PrettyPrint as PP
+import Types (BSONType (..), FieldPath, Index (..), SchemaMap, SchemaTy (..), TypecheckResult)
+import Utils (fromBsonType, throwErrorWithContext, toBsonType, withErr)
 
 updateSchemaTy :: FieldPath -> (BSONType -> TypecheckResult BSONType) -> SchemaTy -> TypecheckResult SchemaTy
 updateSchemaTy fp trans sch = do
@@ -54,18 +54,21 @@ removeSchemaPath fp sch = do
           )
           Set.empty
           s
-    helper [ObjectIndex s] (TObject m) = if member s m
-      then return (TObject $ delete s m)
-      else do
-        (_, d) <- ask
-        tell [PP.render $ d (PP.text ("Index " ++ s ++ " does not exist."))]
-        return (TObject $ delete s m)
-
+    helper [ObjectIndex s] (TObject m) =
+      if member s m
+        then return (TObject $ delete s m)
+        else do
+          (_, d) <- ask
+          tell [PP.render $ d (PP.text ("Index " ++ s ++ " does not exist."))]
+          return (TObject $ delete s m)
     helper (ObjectIndex s : tl) (TObject m) = case m !? s of
       Just fty -> do
         transTy <- helper tl fty
         return (TObject $ insert s transTy m)
-      Nothing -> return $ TObject m
+      Nothing -> do
+        (_, d) <- ask
+        tell [PP.render $ d (PP.text ("Index " ++ s ++ " does not exist."))]
+        return $ TObject m
     helper fp ty = throwErrorWithContext ("Cannot index object" ++ show fp ++ ", " ++ show ty)
 
 -- insertion replaces current type at field path
