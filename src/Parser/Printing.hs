@@ -1,4 +1,4 @@
-module Printing (PP (..), indented, oneLine) where
+module Parser.Printing (PP (..), indented, oneLine) where
 
 import Data.List (intersperse)
 import Data.Map (Map)
@@ -12,27 +12,11 @@ import Types
     BSON (..),
     BSONType (..),
     Expression (..),
-    FieldPath,
     Index (..),
     Op (..),
     SchemaTy (..),
     Stage (..),
   )
-
--- import Data.Sequence (mapWithIndex)
-
--- data BSONType
---   = TSum (Set BSONType)
---   | TConst String
---   | TBool
---   | TNumber
---   | TStr
---   | TObject (Map String BSONType)
---   | TArray BSONType
---   | TObjectId
---   | TNull
---   | TDate
---   deriving (Eq, Ord, Show)
 
 class PP a where
   pp :: a -> Doc
@@ -115,10 +99,8 @@ instance PP Op where
   pp Min = PP.text "$min"
   pp Max = PP.text "$max"
   pp Eq = PP.text "$eq"
-  pp ArrayToObject = PP.text "$arrayToObject"
   pp ObjectToArray = PP.text "$objectToArray"
   pp Cond = PP.text "$cond"
-  pp Convert = PP.text "$convert"
   pp Concat = PP.text "$concat"
   pp ConcatArrays = PP.text "$concatArrays"
   pp IndexOfArray = PP.text "$indexOfArray"

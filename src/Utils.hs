@@ -8,14 +8,17 @@ module Utils
     flattenSchemaTy,
     flattenBSONType,
     throwErrorWithContext,
+    addLintError,
   )
 where
 
 import Control.Monad.Except (MonadError (throwError))
-import Control.Monad.Reader (withReaderT)
+import Control.Monad.Reader (MonadReader (ask))
+import Control.Monad.Writer (MonadWriter (tell))
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
-import Text.PrettyPrint (Doc, nest, render, text, ($+$))
+import Text.PrettyPrint (Doc, render, text)
+import qualified Text.PrettyPrint as PP
 import Types (BSONType (..), Contextual (..), SchemaMap (..), SchemaTy (..), TypecheckResult)
 
 toBsonType :: SchemaTy -> BSONType
@@ -42,6 +45,11 @@ throwErrorWithContext :: (Contextual ctx m, MonadError String m) => String -> m 
 throwErrorWithContext s = do
   errCtx <- getContext
   throwError (render (errCtx (text s)))
+
+addLintError :: Doc -> TypecheckResult ()
+addLintError warning = do
+  (_, d) <- ask
+  tell [PP.render $ d warning]
 
 isEmptySumType :: BSONType -> Bool
 isEmptySumType (TSum x) = Set.size x == 0

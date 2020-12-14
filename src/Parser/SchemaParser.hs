@@ -1,14 +1,11 @@
-module SchemaParser (getContextFromFile, parseSchemaTy) where
+module Parser.SchemaParser (getContextFromFile, parseSchemaTy) where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Set (Set)
 import qualified Data.Set as Set
-import JsonParser (parseJson)
-import ParserCommon (JSON (..), TransformResult, getStringValue, getValue)
+import Parser.JsonParser (parseJson)
+import Parser.ParserCommon (JSON (..), TransformResult, getStringValue, getValue)
 import Types (BSONType (..), Context, SchemaTy (..))
-import Text.PrettyPrint (Doc)
-import qualified Text.PrettyPrint as PP
 
 typeOf :: String -> BSONType
 typeOf "string" = TStr

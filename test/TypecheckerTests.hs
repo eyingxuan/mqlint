@@ -7,7 +7,7 @@ import Control.Monad.Writer (runWriterT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Test.HUnit (Test (..), (~:), (~?=))
-import Typechecker (TypecheckResult, runTypechecker, typecheck)
+import Typechecker.Typechecker (TypecheckResult, runTypechecker, typecheck)
 import Types (AST (..), BSONType (..), Expression (..), Index (..), SchemaTy (..), Stage (..))
 
 typecheckerTests :: Test

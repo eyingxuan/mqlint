@@ -6,7 +6,7 @@ import Control.Monad.Reader (MonadReader (ask), ReaderT, lift, runReaderT)
 import Control.Monad.Writer (MonadWriter (tell), runWriterT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
-import Schema (accessPossibleTys, insertSchemaPath, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
+import Typechecker.Schema (accessPossibleTys, insertSchemaPath, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
 import Test.HUnit (Test (..), (~:), (~?=))
 import Types (BSONType (..), Index (..), SchemaTy (..), TypecheckResult)
 import Utils (withErr)

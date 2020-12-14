@@ -1,0 +1,14 @@
+[
+  {
+    "$match": {
+      "$expr": {
+        "$eq": [
+          "$address",
+          {
+            "hello": "world"
+          }
+        ]
+      }
+    }
+  }
+]

@@ -3,12 +3,12 @@ module GoldenTests (goldenTests) where
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.Map as Map
-import MqlParser (getPipelineFromFile)
-import SchemaParser (getContextFromFile)
+import Parser.MqlParser (getPipelineFromFile)
+import Parser.SchemaParser (getContextFromFile)
 import System.FilePath (replaceExtension, takeBaseName)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Golden (findByExtension, goldenVsString)
-import Typechecker (runTypechecker)
+import Typechecker.Typechecker (runTypechecker)
 
 goldenTests :: IO ()
 goldenTests = defaultMain =<< tests

@@ -1,0 +1,1 @@
+Right (S (fromList [fromList [("f1",TObject (fromList [("address",TStr),("facet",TStr)])),("f2",TObject (fromList [("facet",TStr),("pets",TArray (TSum (fromList [TObject (fromList [("id",TNumber)]),TObject (fromList [("id",TStr)])])))]))]]),[])

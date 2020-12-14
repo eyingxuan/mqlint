@@ -1,9 +1,8 @@
-module MqlParser (getPipelineFromFile, parsePipeline) where
+module Parser.MqlParser (getPipelineFromFile, parsePipeline) where
 
 import qualified Data.Map as Map
-import qualified Data.Set as Set
-import JsonParser (parseJson)
-import ParserCommon (JSON (..), TransformResult, getStringValue, getValue)
+import Parser.JsonParser (parseJson)
+import Parser.ParserCommon (JSON (..), TransformResult, getStringValue, getValue)
 import Text.ParserCombinators.Parsec
 import Types (AST (..), Accumulator (..), BSON (..), Expression (..), FieldPath (..), Index (..), Op (..), Stage (..))
 
@@ -34,12 +33,10 @@ operatorOf "$avg" = Just Avg
 operatorOf "$min" = Just Min
 operatorOf "$max" = Just Max
 operatorOf "$eq" = Just Eq
-operatorOf "$arrayToObject" = Just ArrayToObject
 operatorOf "$objectToArray" = Just ObjectToArray
 operatorOf "$concatArrays" = Just ConcatArrays
 operatorOf "$concat" = Just Concat
 operatorOf "$cond" = Just Cond
-operatorOf "$convert" = Just Convert
 operatorOf "$indexOfArray" = Just IndexOfArray
 operatorOf _ = Nothing
 

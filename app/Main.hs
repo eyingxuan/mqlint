@@ -1,12 +1,9 @@
 module Main where
 
-import qualified Data.Map as Map
-import MqlParser (getPipelineFromFile)
-import Printing (PP (..))
-import SchemaParser (getContextFromFile)
-import System.Environment (getArgs)
-import Typechecker (runTypechecker)
 import Control.Monad (forM_)
+import qualified Data.Map as Map
+import Lib (PP (..), getContextFromFile, getPipelineFromFile, runTypechecker)
+import System.Environment (getArgs)
 
 main :: IO ()
 main = do

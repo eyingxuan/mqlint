@@ -1,4 +1,4 @@
-module ParserCommon (TransformResult, getStringValue, getValue, JSON (..)) where
+module Parser.ParserCommon (TransformResult, getStringValue, getValue, JSON (..)) where
 
 import Data.Map (Map)
 import qualified Data.Map as Map

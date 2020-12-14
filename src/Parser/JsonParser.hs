@@ -1,10 +1,10 @@
-module JsonParser (parseJson) where
+module Parser.JsonParser (parseJson) where
 
 import Control.Applicative (empty)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Numeric (readFloat, readSigned)
-import ParserCommon (JSON (..))
+import Parser.ParserCommon (JSON (..))
 import Text.ParserCombinators.Parsec
 
 parseJson :: String -> Either ParseError JSON

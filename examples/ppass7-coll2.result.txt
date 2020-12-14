@@ -1,0 +1,1 @@
+Right (S (fromList [fromList [("address",TSum (fromList [TObject (fromList [("addr",TStr),("version",TConst "v2"),("zip",TNumber)]),TObject (fromList [("version",TConst "v1")])])),("id",TStr)]]),["Typechecking stage: { \"$project\": { \"address\": { \"longAddr\": 0 } } }\n  Removing field path \"$address.longAddr\"\n    Index longAddr does not exist."])

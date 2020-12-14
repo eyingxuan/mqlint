@@ -3,9 +3,9 @@ module ParserProperties (runQuickCheck) where
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import MqlParser (parsePipeline)
-import Printing (indented)
-import SchemaParser (parseSchemaTy)
+import Parser.MqlParser (parsePipeline)
+import Parser.Printing (indented)
+import Parser.SchemaParser (parseSchemaTy)
 import Test.QuickCheck
   ( Arbitrary (..),
     Gen,
@@ -65,7 +65,6 @@ instance Arbitrary Op where
         ConcatArrays,
         Concat,
         Cond,
-        Convert,
         IndexOfArray
       ]
 

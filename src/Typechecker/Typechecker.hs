@@ -1,16 +1,16 @@
-module Typechecker (typecheck, TypecheckResult, runTypechecker) where
+module Typechecker.Typechecker (typecheck, TypecheckResult, runTypechecker) where
 
-import Control.Monad (foldM, mapM)
-import Control.Monad.Except (ExceptT, runExceptT)
-import Control.Monad.Identity (Identity, runIdentity)
-import Control.Monad.Reader (MonadReader (ask), ReaderT, lift, runReaderT)
-import Control.Monad.Writer (MonadWriter (tell), runWriterT)
+import Control.Monad (foldM)
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Identity (runIdentity)
+import Control.Monad.Reader (MonadReader (ask), runReaderT)
+import Control.Monad.Writer (runWriterT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
-import ExpressionType (typeOfExpression)
-import Printing (oneLine)
-import Schema (accessPossibleTys, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
+import Parser.Printing (oneLine)
 import qualified Text.PrettyPrint as PP
+import Typechecker.ExpressionType (typeOfExpression)
+import Typechecker.Schema (accessPossibleTys, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
 import Types
   ( AST (..),
     Accumulator (..),

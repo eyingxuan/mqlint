@@ -1,6 +1,6 @@
-module Lib
-    ( someFunc
-    ) where
+module Lib (runTypechecker, getContextFromFile, getPipelineFromFile, PP (..)) where
 
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+import Parser.MqlParser (getPipelineFromFile)
+import Parser.Printing (PP (..))
+import Parser.SchemaParser (getContextFromFile)
+import Typechecker.Typechecker (runTypechecker)

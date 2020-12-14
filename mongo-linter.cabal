@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5eeb562b9da810df060386ffbf36fb3739b15a14bcd6544bdc65f832f452d88d
+-- hash: 28ff4a75361f4f5041d80a4e8a8f25b705923d4db47cfb56bffc26d96d2a11bc
 
 name:           mongo-linter
 version:        0.1.0.0
@@ -20,15 +20,15 @@ extra-source-files:
 
 library
   exposed-modules:
-      ExpressionType
-      JsonParser
       Lib
-      MqlParser
-      ParserCommon
-      Printing
-      Schema
-      SchemaParser
-      Typechecker
+      Parser.JsonParser
+      Parser.MqlParser
+      Parser.ParserCommon
+      Parser.Printing
+      Parser.SchemaParser
+      Typechecker.ExpressionType
+      Typechecker.Schema
+      Typechecker.Typechecker
       Types
       Utils
   other-modules:
