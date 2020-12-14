@@ -16,6 +16,7 @@ import Types
     Accumulator (..),
     BSON (..),
     BSONType (..),
+    Contextual (..),
     Expression (..),
     FieldPath (..),
     Index (..),
@@ -24,7 +25,7 @@ import Types
     Stage (..),
     TypecheckResult,
   )
-import Utils (flattenSchemaTy, fromBsonType, isSubtype, throwErrorWithContext, toBsonType, withContext, withErr)
+import Utils (flattenSchemaTy, fromBsonType, isSubtype, throwErrorWithContext, toBsonType, withErr)
 
 runTypechecker :: AST -> SchemaTy -> Map.Map String SchemaTy -> Either String (SchemaTy, [String])
 runTypechecker p sch db =

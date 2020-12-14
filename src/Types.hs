@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Types
   ( Context,
     BSON (..),
@@ -12,16 +15,18 @@ module Types
     Expression (..),
     Op (..),
     TypecheckResult,
+    Contextual (..),
   )
 where
 
 import Control.Monad.Except (ExceptT)
 import Control.Monad.Identity (Identity)
-import Control.Monad.Reader (ReaderT)
+import Control.Monad.Reader (MonadReader, ReaderT, ask, withReaderT)
 import Control.Monad.Writer (WriterT)
+import Data.Bifunctor (second)
 import Data.Map.Internal (Map)
 import Data.Set (Set)
-import Text.PrettyPrint (Doc)
+import Text.PrettyPrint (Doc, nest, ($+$))
 
 type TypecheckTrace = Doc -> Doc
 
@@ -30,6 +35,16 @@ type Context = Map String SchemaTy
 type Exception = WriterT [String] (ExceptT String Identity)
 
 type TypecheckResult = ReaderT (Context, TypecheckTrace) Exception
+
+class MonadReader ctx m => Contextual ctx m where
+  withContext :: m a -> Doc -> m a
+  getContext :: m (Doc -> Doc)
+
+instance Contextual (Context, TypecheckTrace) TypecheckResult where
+  withContext m d = withReaderT (second (\prevDoc nxtDoc -> prevDoc (d $+$ nest 2 nxtDoc))) m
+  getContext = do
+    (_, errorCtx) <- ask
+    return errorCtx
 
 data Index
   = ArrayIndex
