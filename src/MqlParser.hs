@@ -1,4 +1,4 @@
-module MqlParser (getPipelineFromFile) where
+module MqlParser (getPipelineFromFile, parsePipeline) where
 
 import qualified Data.Map as Map
 import JsonParser (parseJson)
@@ -30,12 +30,15 @@ operatorOf "$abs" = Just Abs
 operatorOf "$ceil" = Just Ceil
 operatorOf "$floor" = Just Floor
 operatorOf "$avg" = Just Avg
+operatorOf "$min" = Just Min
+operatorOf "$max" = Just Max
 operatorOf "$eq" = Just Eq
 operatorOf "$arrayToObject" = Just ArrayToObject
 operatorOf "$objectToArray" = Just ObjectToArray
 operatorOf "$concatArrays" = Just ConcatArrays
 operatorOf "$concat" = Just Concat
 operatorOf "$cond" = Just Cond
+operatorOf "$convert" = Just Convert
 operatorOf "$indexOfArray" = Just IndexOfArray
 operatorOf _ = Nothing
 
@@ -89,6 +92,8 @@ accumulatorOf a = case a of
   "$last" -> Right Last
   "$min" -> Right AMin
   "$max" -> Right AMax
+  "$push" -> Right Push
+  "$sum" -> Right Sum
   _ -> Left "unknown accumulator."
 
 getAccumulation :: (String, JSON) -> TransformResult (String, Accumulator, Expression)
@@ -140,6 +145,12 @@ makePipeline (JArray l) = do
       t <- helper ss
       return (h : t)
 makePipeline _ = Left "Pipeline must be array of stages."
+
+parsePipeline :: String -> TransformResult AST
+parsePipeline contents = do
+  case parseJson contents of
+    Right json -> makePipeline json
+    Left x -> Left (show x)
 
 getPipelineFromFile :: String -> IO (TransformResult AST)
 getPipelineFromFile filename = do

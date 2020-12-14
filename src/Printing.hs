@@ -97,8 +97,8 @@ instance PP SchemaTy where
 
 instance PP BSON where
   pp (Number n) = PP.double n
-  pp (Str s) = PP.text s
-  pp (ObjectId s) = PP.text s
+  pp (Str s) = quote s
+  pp (ObjectId s) = quote s
   pp Null = PP.text "null"
   pp (Date d) = PP.int d
   pp (Boolean True) = PP.text "true"
@@ -115,8 +115,13 @@ instance PP Op where
   pp Min = PP.text "$min"
   pp Max = PP.text "$max"
   pp Eq = PP.text "$eq"
+  pp ArrayToObject = PP.text "$arrayToObject"
+  pp ObjectToArray = PP.text "$objectToArray"
+  pp Cond = PP.text "$cond"
+  pp Convert = PP.text "$convert"
   pp Concat = PP.text "$concat"
   pp ConcatArrays = PP.text "$concatArrays"
+  pp IndexOfArray = PP.text "$indexOfArray"
 
 instance PP Accumulator where
   pp AAvg = PP.text "$avg"
@@ -138,7 +143,7 @@ withDollar :: [Index] -> Doc
 withDollar fp = PP.text "$" <> withoutDollar fp
 
 instance PP Expression where
-  pp (FP fp) = withDollar fp
+  pp (FP fp) = PP.char '"' <> withDollar fp <> PP.char '"'
   pp (Inclusion True) = PP.text "1"
   pp (Inclusion False) = PP.text "0"
   pp (Lit bson) = pp bson -- TODO: determine when we need a `$literal` wrapper.
@@ -151,8 +156,8 @@ singleO k v = ppo $ Map.singleton k v
 instance PP Stage where
   pp (Match exp) = singleO "$match" (EObject (Map.singleton "$expr" exp))
   -- pp (Match exp) singleO "$match" (EObject (Map.singleton "$expr" exp))
-  pp (Unwind fp) = singleO "$unwind" (FP fp)
-  pp (Lookup from lf ff as) = singleO "$group" (EObject (Map.fromList [
+  pp (Unwind fp) = singleO "$unwind" (Lit (Str (renderOneLine (withDollar fp))))
+  pp (Lookup from lf ff as) = singleO "$lookup" (EObject (Map.fromList [
       ("from", Lit (Str from))
     , ("localField", Lit (Str (renderOneLine (withoutDollar lf))))
     , ("foreignField", Lit (Str (renderOneLine (withoutDollar ff))))
@@ -183,17 +188,3 @@ ex =
         ("name", TStr),
         ("addresses", TArray TStr)
       ]
-
--- >>> pp ex
--- {
---  "type": "object",
---  "properties": {
---                 "active": {"type": "boolean"},
---                 "addresses": {
---                               "type": "sum",
---                               "items": {"type": "string"}
---                              },
---                 "name": {"type": "string"},
---                 "version": {"type": "v1"}
---                }
--- }

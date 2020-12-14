@@ -19,7 +19,7 @@ jTopP =
        )
 
 jArrP :: Parser [JSON]
-jArrP = lexeme (char '[') *> jValP `sepBy` lexeme (char ',') <* lexeme (char ']')
+jArrP = lexeme (char '[') *> lexeme jValP `sepBy` lexeme (char ',') <* lexeme (char ']')
 
 jObjP :: Parser (Map String JSON)
 jObjP = lexeme (char '{') *> (Map.fromList <$> lexeme jPairP `sepBy` lexeme (char ',')) <* lexeme (char '}')
