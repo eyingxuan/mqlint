@@ -1,35 +1,24 @@
-module ParserProperties where
+module ParserProperties (runQuickCheck) where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import MqlParser (parsePipeline)
-import Printing (indented, oneLine)
+import Printing (indented)
 import SchemaParser (parseSchemaTy)
 import Test.QuickCheck
   ( Arbitrary (..),
     Gen,
-    Property,
-    Testable (..),
     choose,
-    classify,
     elements,
     frequency,
-    generate,
     listOf,
     listOf1,
     maxSize,
     maxSuccess,
     oneof,
     quickCheck,
-    quickCheckWith,
-    resize,
-    scale,
-    sized,
-    stdArgs,
     vectorOf,
-    within,
-    (==>),
   )
 import Types
 
@@ -61,8 +50,6 @@ genBSONType n =
     )
   where
     n' = n `div` 2
-
--- instance Arbitrary Stage where
 
 instance Arbitrary Op where
   arbitrary =
@@ -227,3 +214,8 @@ prop_schema_roundtrip t = parseSchemaTy (indented t) == Right t
 
 prop_ast_roundtrip :: AST -> Bool
 prop_ast_roundtrip ast = parsePipeline (indented ast) == Right ast
+
+runQuickCheck :: IO ()
+runQuickCheck = do
+  quickCheck prop_schema_roundtrip
+  quickCheck prop_ast_roundtrip
