@@ -159,7 +159,7 @@ processStage (Match exp) sch = do
       _ -> return sch
 processStage (Group groupByExpr accumulations) schema = do
   idType <- typeOfExpression schema groupByExpr
-  accTypes <- mapM (\(key, acc, exp) -> (,,) key acc <$> typeOfExpression schema exp) accumulations
+  accTypes <- mapM (\(key, (acc, exp)) -> (,,) key acc <$> typeOfExpression schema exp) (Map.toList accumulations)
   returnTypes <- Map.fromList <$> mapM (\(key, acc, expT) -> (,) key <$> getAccReturnT acc expT) accTypes
   let newSchema = Map.insert "_id" idType returnTypes
   return $ S $ Set.singleton newSchema

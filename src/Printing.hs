@@ -6,17 +6,17 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Text.PrettyPrint (Doc)
 import qualified Text.PrettyPrint as PP
-import Types (
-  BSONType (..),
-  SchemaTy (..),
-  BSON (..),
-  Op (..),
-  Accumulator (..),
-  Expression (..),
-  Stage (..),
-  AST (..),
-  Index (..),
-  FieldPath
+import Types
+  ( AST (..),
+    Accumulator (..),
+    BSON (..),
+    BSONType (..),
+    Expression (..),
+    FieldPath,
+    Index (..),
+    Op (..),
+    SchemaTy (..),
+    Stage (..),
   )
 
 -- import Data.Sequence (mapWithIndex)
@@ -157,16 +157,25 @@ instance PP Stage where
   pp (Match exp) = singleO "$match" (EObject (Map.singleton "$expr" exp))
   -- pp (Match exp) singleO "$match" (EObject (Map.singleton "$expr" exp))
   pp (Unwind fp) = singleO "$unwind" (Lit (Str (renderOneLine (withDollar fp))))
-  pp (Lookup from lf ff as) = singleO "$lookup" (EObject (Map.fromList [
-      ("from", Lit (Str from))
-    , ("localField", Lit (Str (renderOneLine (withoutDollar lf))))
-    , ("foreignField", Lit (Str (renderOneLine (withoutDollar ff))))
-    , ("as", Lit (Str as))
-    ]))
+  pp (Lookup from lf ff as) =
+    singleO
+      "$lookup"
+      ( EObject
+          ( Map.fromList
+              [ ("from", Lit (Str from)),
+                ("localField", Lit (Str (renderOneLine (withoutDollar lf)))),
+                ("foreignField", Lit (Str (renderOneLine (withoutDollar ff)))),
+                ("as", Lit (Str as))
+              ]
+          )
+      )
   pp (Facet pipelines) = objectify [keyvalify "$facet" (ppo pipelines)]
   pp (Project fields) = singleO "$project" (EObject fields)
-  pp (Group groupBy accumulators) = singleO "$group" (
-    EObject (Map.fromList (("_id", groupBy) : map (\(k, acc, exp) -> (k, EObject (Map.singleton (PP.render (pp acc)) exp))) accumulators)))
+  pp (Group groupBy accumulators) =
+    singleO
+      "$group"
+      ( EObject (Map.fromList (("_id", groupBy) : map (\(k, (acc, exp)) -> (k, EObject (Map.singleton (PP.render (pp acc)) exp))) (Map.toList accumulators)))
+      )
 
 instance PP AST where
   pp (Pipeline stages) = arrayify $ pp <$> stages

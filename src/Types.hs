@@ -122,7 +122,7 @@ data Stage
   = Match Expression
   | Unwind FieldPath
   | Lookup String FieldPath FieldPath String
-  | Group Expression [(String, Accumulator, Expression)]
+  | Group Expression (Map String (Accumulator, Expression))
   | Facet (Map String AST)
   | Project (Map String Expression)
   deriving (Eq, Ord, Show)

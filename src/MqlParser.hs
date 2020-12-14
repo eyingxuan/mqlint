@@ -1,6 +1,7 @@
 module MqlParser (getPipelineFromFile, parsePipeline) where
 
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import JsonParser (parseJson)
 import ParserCommon (JSON (..), TransformResult, getStringValue, getValue)
 import Text.ParserCombinators.Parsec
@@ -96,18 +97,18 @@ accumulatorOf a = case a of
   "$sum" -> Right Sum
   _ -> Left "unknown accumulator."
 
-getAccumulation :: (String, JSON) -> TransformResult (String, Accumulator, Expression)
+getAccumulation :: (String, JSON) -> TransformResult (String, (Accumulator, Expression))
 getAccumulation (k, JObject o) = case Map.toList o of
-  [(acc, exp)] -> (,,) <$> pure k <*> accumulatorOf acc <*> makeExpression exp
+  [(acc, exp)] -> (,) <$> pure k <*> ((,) <$> accumulatorOf acc <*> makeExpression exp)
   _ -> Left "Exactly one accumulator per field."
 getAccumulation _ = Left "Accumulator inside $group must be an object."
 
 makeStage :: JSON -> TransformResult Stage
 makeStage =
   parseStage
-    [ ("$match",
-       withObj
-        ( \o -> Match <$> (getValue "$expr" o >>= makeExpression))
+    [ ( "$match",
+        withObj
+          (\o -> Match <$> (getValue "$expr" o >>= makeExpression))
       ),
       ("$unwind", fmap Unwind . getFieldPath),
       ( "$lookup",
@@ -123,7 +124,7 @@ makeStage =
         withObj
           ( \o ->
               Group <$> (getValue "_id" o >>= makeExpression)
-                <*> mapM getAccumulation (Map.toList (Map.delete "_id" o))
+                <*> (Map.fromList <$> mapM getAccumulation (Map.toList (Map.delete "_id" o)))
           )
       ),
       ("$facet", withObj (fmap Facet . mapM makePipeline)),
