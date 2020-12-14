@@ -6,6 +6,7 @@
         "id": { "type": "string" },
         "firstName": { "type": "string" },
         "lastName": { "type": "string" },
+        "stuff": { "type": "array", "items": { "type": "string" } },
         "pets": {
           "type": "array",
           "items": {

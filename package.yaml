@@ -24,7 +24,6 @@ dependencies:
   - parsec
   - mtl
   - pretty
-  - QuickCheck
 
 library:
   source-dirs: src
@@ -52,3 +51,8 @@ tests:
       - -with-rtsopts=-N
     dependencies:
       - mongo-linter
+      - QuickCheck
+      - tasty
+      - tasty-golden
+      - filepath
+      - bytestring

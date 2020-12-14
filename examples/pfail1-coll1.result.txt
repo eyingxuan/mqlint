@@ -1,0 +1,1 @@
+Left "Typechecking stage: { \"$project\": { \"firstName\": 1, \"lastName\": 0 } }\n  Mixing exclusion with other expressions not allowed"

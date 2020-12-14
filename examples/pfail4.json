@@ -1,7 +1,0 @@
-[
-  {
-    "$project": {
-      "names": {"$concat": "$pets"}
-    }
-  }
-]
