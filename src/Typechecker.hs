@@ -25,7 +25,7 @@ import Types
     Stage (..),
     TypecheckResult,
   )
-import Utils (flattenSchemaTy, fromBsonType, isSubtype, throwErrorWithContext, toBsonType, withErr)
+import Utils (flattenBSONType, flattenSchemaTy, fromBsonType, isSubtype, throwErrorWithContext, toBsonType, withErr)
 
 runTypechecker :: AST -> SchemaTy -> Map.Map String SchemaTy -> Either String (SchemaTy, [String])
 runTypechecker p sch db =
@@ -165,14 +165,17 @@ processStage (Group groupByExpr accumulations) schema = do
   return $ S $ Set.singleton newSchema
 
 getAccReturnT :: Accumulator -> BSONType -> TypecheckResult BSONType
-getAccReturnT AAvg TNumber = return TNumber
-getAccReturnT First a = return a
-getAccReturnT Last a = return a
-getAccReturnT AMin TNumber = return TNumber
-getAccReturnT AMax TNumber = return TNumber
-getAccReturnT Push t = return $ TArray t
-getAccReturnT Sum TNumber = return TNumber
-getAccReturnT acc t = throwErrorWithContext $ "Not proper argument type " ++ oneLine t ++ "for accumulator " ++ oneLine acc
+getAccReturnT acc bty = getAccReturnTHelper acc (flattenBSONType bty)
+
+getAccReturnTHelper :: Accumulator -> BSONType -> TypecheckResult BSONType
+getAccReturnTHelper AAvg TNumber = return TNumber
+getAccReturnTHelper First a = return a
+getAccReturnTHelper Last a = return a
+getAccReturnTHelper AMin TNumber = return TNumber
+getAccReturnTHelper AMax TNumber = return TNumber
+getAccReturnTHelper Push t = return $ TArray t
+getAccReturnTHelper Sum TNumber = return TNumber
+getAccReturnTHelper acc t = throwErrorWithContext $ "Not proper argument type " ++ oneLine t ++ "for accumulator " ++ oneLine acc
 
 typecheck :: AST -> SchemaTy -> TypecheckResult SchemaTy
 typecheck (Pipeline []) ty = flattenSchemaTy ty
