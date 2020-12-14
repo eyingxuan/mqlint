@@ -1,6 +1,7 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Utils
   ( withErr,
-    withContext,
     toBsonType,
     fromBsonType,
     isSubtype,
@@ -11,12 +12,11 @@ module Utils
 where
 
 import Control.Monad.Except (MonadError (throwError))
-import Control.Monad.Reader (MonadReader (ask), withReaderT)
-import Data.Bifunctor (second)
+import Control.Monad.Reader (withReaderT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Text.PrettyPrint (Doc, nest, render, text, ($+$))
-import Types (BSONType (..), SchemaMap (..), SchemaTy (..), TypecheckResult)
+import Types (BSONType (..), Contextual (..), SchemaMap (..), SchemaTy (..), TypecheckResult)
 
 toBsonType :: SchemaTy -> BSONType
 toBsonType (S l) = TSum $ Set.map TObject l
@@ -38,13 +38,10 @@ withErr :: Maybe a -> String -> TypecheckResult a
 withErr (Just x) _ = return x
 withErr Nothing msg = throwErrorWithContext msg
 
-withContext :: TypecheckResult a -> Doc -> TypecheckResult a
-withContext m d = withReaderT (second (\prevDoc nxtDoc -> prevDoc (d $+$ nest 2 nxtDoc))) m
-
-throwErrorWithContext :: String -> TypecheckResult a
+throwErrorWithContext :: (Contextual ctx m, MonadError String m) => String -> m r
 throwErrorWithContext s = do
-  (_, errorCtx) <- ask
-  throwError (render (errorCtx (text s)))
+  errCtx <- getContext
+  throwError (render (errCtx (text s)))
 
 isEmptySumType :: BSONType -> Bool
 isEmptySumType (TSum x) = Set.size x == 0

@@ -18,7 +18,6 @@ main = do
       case (ctx, pipe) of
         (Right context, Right pipeline) ->
           case Map.lookup collectionName context of
-            -- Just schema -> print pipeline
             Just schema -> case runTypechecker pipeline schema context of
               Left error -> do
                 putStrLn "Error found!"

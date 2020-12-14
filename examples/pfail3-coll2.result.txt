@@ -1,0 +1,1 @@
+Left "Typechecking stage: { \"$project\": { \"_id\": 0, \"firstName\": 1, \"zip\": $addr.address.zip } }\n  Inserting expression 1 at \"firstName\"\n    Inclusion cannot be typed"

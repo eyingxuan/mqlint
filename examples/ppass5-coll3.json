@@ -1,0 +1,11 @@
+[
+  {
+    "$match": { "$expr": { "$eq": ["$version", "v2"] } }
+  },
+  {
+    "$group": {
+      "_id": { "id": "$id" },
+      "avg": { "$avg": "$bankId" }
+    }
+  }
+]

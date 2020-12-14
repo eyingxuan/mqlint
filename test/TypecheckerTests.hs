@@ -47,8 +47,9 @@ testSimpleLookup =
                 ( Set.fromList
                     [ Map.fromList
                         [ ( "m1",
-                            TObject
-                              (Map.fromList [("x", TStr), ("y", TStr)])
+                            TArray $
+                              TObject
+                                (Map.fromList [("x", TStr), ("y", TStr)])
                           ),
                           ("x", TStr),
                           ("z", TNumber)
