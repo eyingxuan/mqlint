@@ -4,6 +4,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Parser.MqlParser (parsePipeline)
+import Parser.ParserCommon (runTransformResult)
 import Parser.Printing (indented)
 import Parser.SchemaParser (parseSchemaTy)
 import Test.QuickCheck
@@ -29,7 +30,9 @@ rootTypes =
   ]
 
 genField :: Gen String
-genField = listOf1 (oneof $ pure <$> ['a' .. 'z'])
+genField = do
+  len <- choose (1, 5)
+  vectorOf len (oneof $ pure <$> ['a' .. 'z'])
 
 genConstField :: Gen String
 genConstField = do
@@ -135,31 +138,25 @@ genFP = listOf1 arbitrary
 
 instance Arbitrary Stage where
   arbitrary =
-    frequency
-      [ (3, Match <$> arbitrary),
-        (3, Unwind <$> genFP),
-        (3, Lookup <$> genField <*> genFP <*> genFP <*> genField),
-        ( 3,
-          do
-            len <- choose (1, 3)
-            fields <- vectorOf len ((,) <$> genField <*> ((,) <$> arbitrary <*> arbitrary))
-            exp <- arbitrary
-            return $ Group exp (Map.fromList fields)
-        ),
-        ( 3,
-          do
-            len <- choose (1, 3)
-            fields <- vectorOf len genField
-            asts <- vectorOf len (genAST 1)
-            return $ Facet (Map.fromList (zip fields asts))
-        ),
-        ( 3,
-          do
-            len <- choose (1, 3)
-            fields <- vectorOf len genField
-            exps <- vectorOf len arbitrary
-            return $ Project (Map.fromList (zip fields exps))
-        )
+    oneof
+      [ Match <$> arbitrary,
+        Unwind <$> genFP,
+        Lookup <$> genField <*> genFP <*> genFP <*> genField,
+        do
+          len <- choose (1, 3)
+          fields <- vectorOf len ((,) <$> genField <*> ((,) <$> arbitrary <*> arbitrary))
+          exp <- arbitrary
+          return $ Group exp (Map.fromList fields),
+        do
+          len <- choose (1, 3)
+          fields <- vectorOf len genField
+          asts <- vectorOf len (genAST 1)
+          return $ Facet (Map.fromList (zip fields asts)),
+        do
+          len <- choose (1, 3)
+          fields <- vectorOf len genField
+          exps <- vectorOf len arbitrary
+          return $ Project (Map.fromList (zip fields exps))
       ]
   shrink (Match e) = Match <$> shrink e
   shrink (Unwind fp) = Unwind . (: []) <$> fp
@@ -203,16 +200,16 @@ instance Arbitrary SchemaTy where
         return $ S $ Set.singleton shrunken
 
 instance Arbitrary AST where
-  arbitrary = genAST 1
+  arbitrary = genAST 5
   shrink (Pipeline stages) = do
     shrunk_stages <- shrink <$> stages
     fmap (Pipeline . (: [])) shrunk_stages
 
 prop_schema_roundtrip :: SchemaTy -> Bool
-prop_schema_roundtrip t = parseSchemaTy (indented t) == Right t
+prop_schema_roundtrip t = runTransformResult (parseSchemaTy (indented t)) == Right t
 
 prop_ast_roundtrip :: AST -> Bool
-prop_ast_roundtrip ast = parsePipeline (indented ast) == Right ast
+prop_ast_roundtrip ast = runTransformResult (parsePipeline (indented ast)) == Right ast
 
 runQuickCheck :: IO ()
 runQuickCheck = do

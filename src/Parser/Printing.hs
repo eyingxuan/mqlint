@@ -1,5 +1,6 @@
 module Parser.Printing (PP (..), indented, oneLine) where
 
+import Data.Foldable (fold)
 import Data.List (intersperse)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -119,7 +120,7 @@ instance PP Index where
   pp (ObjectIndex s) = PP.text s
 
 withoutDollar :: [Index] -> Doc
-withoutDollar fp = foldMap id (intersperse (PP.text ".") (pp <$> fp))
+withoutDollar fp = fold (intersperse (PP.text ".") (pp <$> fp))
 
 withDollar :: [Index] -> Doc
 withDollar fp = PP.text "$" <> withoutDollar fp
@@ -170,12 +171,3 @@ oneLine = renderOneLine . pp
 
 indented :: PP a => a -> String
 indented = PP.render . pp
-
-ex =
-  TObject $
-    Map.fromList
-      [ ("version", TConst "v1"),
-        ("active", TBool),
-        ("name", TStr),
-        ("addresses", TArray TStr)
-      ]

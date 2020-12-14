@@ -2,7 +2,7 @@ module Main where
 
 import Control.Monad (forM_)
 import qualified Data.Map as Map
-import Lib (PP (..), getContextFromFile, getPipelineFromFile, runTypechecker)
+import Lib (PP (..), getContextFromFile, getPipelineFromFile, runTransformResult, runTypechecker)
 import System.Environment (getArgs)
 
 main :: IO ()
@@ -12,7 +12,7 @@ main = do
     schemaFile : pipelineFile : collectionName : _ -> do
       ctx <- getContextFromFile schemaFile
       pipe <- getPipelineFromFile pipelineFile
-      case (ctx, pipe) of
+      case (runTransformResult ctx, runTransformResult pipe) of
         (Right context, Right pipeline) ->
           case Map.lookup collectionName context of
             Just schema -> case runTypechecker pipeline schema context of

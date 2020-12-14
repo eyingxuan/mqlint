@@ -41,7 +41,7 @@ withErr :: Maybe a -> String -> TypecheckResult a
 withErr (Just x) _ = return x
 withErr Nothing msg = throwErrorWithContext msg
 
-throwErrorWithContext :: (Contextual ctx m, MonadError String m) => String -> m r
+throwErrorWithContext :: (Contextual m, MonadError String m) => String -> m r
 throwErrorWithContext s = do
   errCtx <- getContext
   throwError (render (errCtx (text s)))

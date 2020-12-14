@@ -4,6 +4,7 @@ import qualified Data.ByteString.Lazy as BS
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.Map as Map
 import Parser.MqlParser (getPipelineFromFile)
+import Parser.ParserCommon (runTransformResult)
 import Parser.SchemaParser (getContextFromFile)
 import System.FilePath (replaceExtension, takeBaseName)
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -22,7 +23,7 @@ execute schemaFile pipelineFile = do
   ctx <- getContextFromFile schemaFile
   pipe <- getPipelineFromFile pipelineFile
   let colName = takeWhileInclusive (== '-') (takeBaseName pipelineFile)
-   in case (ctx, pipe) of
+   in case (runTransformResult ctx, runTransformResult pipe) of
         (Right context, Right pipeline) ->
           case Map.lookup colName context of
             Just schema -> return $ C.pack $ show (runTypechecker pipeline schema context)

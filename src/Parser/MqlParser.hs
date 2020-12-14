@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Parser.MqlParser (getPipelineFromFile, parsePipeline) where
 
 import qualified Data.Map as Map
@@ -5,6 +7,7 @@ import Parser.JsonParser (parseJson)
 import Parser.ParserCommon (JSON (..), TransformResult, getStringValue, getValue)
 import Text.ParserCombinators.Parsec
 import Types (AST (..), Accumulator (..), BSON (..), Expression (..), FieldPath (..), Index (..), Op (..), Stage (..))
+import Utils (throwErrorWithContext)
 
 indexP :: Parser Index
 indexP =
@@ -69,36 +72,36 @@ parseStage :: [(String, JSON -> TransformResult Stage)] -> JSON -> TransformResu
 parseStage m (JObject o) = case Map.toList o of
   [(k, v)] -> case Map.lookup k (Map.fromList m) of
     Just f -> f v
-    Nothing -> Left "unrecognized stage."
-  _ -> Left "Stage must only have one key."
-parseStage _ _ = Left "Stage must be an object."
+    Nothing -> throwErrorWithContext "unrecognized stage."
+  _ -> throwErrorWithContext "Stage must only have one key."
+parseStage _ _ = throwErrorWithContext "Stage must be an object."
 
 getFieldPathWithoutDollar (JStr s) = case parse fieldPathP "" ("$" ++ s) of
-  Left _ -> Left "error parsing fieldpath"
-  Right x -> Right x
-getFieldPathWithoutDollar _ = Left "Fieldpath must be a JSON string."
+  Left _ -> throwErrorWithContext "error parsing fieldpath"
+  Right x -> return x
+getFieldPathWithoutDollar _ = throwErrorWithContext "Fieldpath must be a JSON string."
 
 getFieldPath (JStr s) = case parse fieldPathP "" s of
-  Left _ -> Left "error parsing fieldpath"
-  Right x -> Right x
-getFieldPath _ = Left "Fieldpath must be a JSON string."
+  Left _ -> throwErrorWithContext "error parsing fieldpath"
+  Right x -> return x
+getFieldPath _ = throwErrorWithContext "Fieldpath must be a JSON string."
 
-accumulatorOf :: String -> Either String Accumulator
+accumulatorOf :: String -> TransformResult Accumulator
 accumulatorOf a = case a of
-  "$avg" -> Right AAvg
-  "$first" -> Right First
-  "$last" -> Right Last
-  "$min" -> Right AMin
-  "$max" -> Right AMax
-  "$push" -> Right Push
-  "$sum" -> Right Sum
-  _ -> Left "unknown accumulator."
+  "$avg" -> return AAvg
+  "$first" -> return First
+  "$last" -> return Last
+  "$min" -> return AMin
+  "$max" -> return AMax
+  "$push" -> return Push
+  "$sum" -> return Sum
+  _ -> throwErrorWithContext "unknown accumulator."
 
 getAccumulation :: (String, JSON) -> TransformResult (String, (Accumulator, Expression))
 getAccumulation (k, JObject o) = case Map.toList o of
   [(acc, exp)] -> (,) <$> pure k <*> ((,) <$> accumulatorOf acc <*> makeExpression exp)
-  _ -> Left "Exactly one accumulator per field."
-getAccumulation _ = Left "Accumulator inside $group must be an object."
+  _ -> throwErrorWithContext "Exactly one accumulator per field."
+getAccumulation _ = throwErrorWithContext "Accumulator inside $group must be an object."
 
 makeStage :: JSON -> TransformResult Stage
 makeStage =
@@ -130,7 +133,7 @@ makeStage =
     ]
   where
     withObj f (JObject o) = f o
-    withObj _ _ = Left "Expecting object."
+    withObj _ _ = throwErrorWithContext "Expecting object."
 
 makePipeline :: JSON -> TransformResult AST
 makePipeline (JArray l) = do
@@ -142,17 +145,17 @@ makePipeline (JArray l) = do
       h <- makeStage s
       t <- helper ss
       return (h : t)
-makePipeline _ = Left "Pipeline must be array of stages."
+makePipeline _ = throwErrorWithContext "Pipeline must be array of stages."
 
 parsePipeline :: String -> TransformResult AST
 parsePipeline contents = do
   case parseJson contents of
     Right json -> makePipeline json
-    Left x -> Left (show x)
+    Left x -> throwErrorWithContext (show x)
 
 getPipelineFromFile :: String -> IO (TransformResult AST)
 getPipelineFromFile filename = do
   contents <- readFile filename
   case parseJson contents of
     Right json -> return $ makePipeline json
-    Left s -> return $ Left (show s)
+    Left s -> return $ throwErrorWithContext (show s)

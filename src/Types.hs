@@ -21,7 +21,7 @@ where
 
 import Control.Monad.Except (ExceptT)
 import Control.Monad.Identity (Identity)
-import Control.Monad.Reader (MonadReader, ReaderT, ask, withReaderT)
+import Control.Monad.Reader (ReaderT, ask, withReaderT)
 import Control.Monad.Writer (WriterT)
 import Data.Bifunctor (second)
 import Data.Map.Internal (Map)
@@ -36,11 +36,11 @@ type Exception = WriterT [String] (ExceptT String Identity)
 
 type TypecheckResult = ReaderT (Context, TypecheckTrace) Exception
 
-class MonadReader ctx m => Contextual ctx m where
+class Contextual m where
   withContext :: m a -> Doc -> m a
   getContext :: m (Doc -> Doc)
 
-instance Contextual (Context, TypecheckTrace) TypecheckResult where
+instance Contextual TypecheckResult where
   withContext m d = withReaderT (second (\prevDoc nxtDoc -> prevDoc (d $+$ nest 2 nxtDoc))) m
   getContext = do
     (_, errorCtx) <- ask
