@@ -64,15 +64,28 @@ processStage (Unwind fp) sch =
 processStage (Lookup foreignCol localFp foreignFp as) sch = do
   (ctx, _) <- ask
   foreignSch <- withErr (ctx Map.!? foreignCol) "No such foreign collection"
-  localTys <- Set.toList . Set.fromList <$> withContext (accessPossibleTys localFp sch) (PP.text ("Accessing local field path: " ++ oneLine (FP localFp)))
-  foreignTys <- Set.toList . Set.fromList <$> withContext (accessPossibleTys foreignFp foreignSch) (PP.text ("Accessing foreign field path: " ++ oneLine (FP foreignFp)))
+  localTys <-
+    Set.toList . Set.fromList
+      <$> withContext
+        (accessPossibleTys localFp sch)
+        (PP.text ("Accessing local field path: " ++ oneLine (FP localFp)))
+  foreignTys <-
+    Set.toList . Set.fromList
+      <$> withContext
+        (accessPossibleTys foreignFp foreignSch)
+        (PP.text ("Accessing foreign field path: " ++ oneLine (FP foreignFp)))
   if length localTys == 1 && length foreignTys == 1
     then case (localTys, foreignTys) of
       ([lty], [fty]) ->
         if isSubtype lty fty || isSubtype fty lty
           then
             let (S fsl, S lsl) = (foreignSch, sch)
-             in return (S (Set.fromList [Map.insert as (TArray $ TSum (Set.map TObject fsl)) lm | lm <- Set.toList lsl]))
+             in return
+                  ( S
+                      ( Set.fromList
+                          [Map.insert as (TArray $ TSum (Set.map TObject fsl)) lm | lm <- Set.toList lsl]
+                      )
+                  )
           else throwErrorWithContext "Local and foreign lookup fields do not match"
       _ -> throwErrorWithContext "not possible"
     else throwErrorWithContext "Local and foreign lookup fields do not match"
@@ -80,13 +93,14 @@ processStage (Facet m) sch = do
   newTy <-
     mapM
       ( \(k, v) -> do
-          facetTy <- withContext (typecheck v sch) (PP.text ("Typechecking field " ++ k ++ " with pipeline " ++ oneLine v))
+          facetTy <-
+            withContext
+              (typecheck v sch)
+              (PP.text ("Typechecking field " ++ k ++ " with pipeline " ++ oneLine v))
           return (k, toBsonType facetTy)
       )
       (Map.toList m)
   return $ S (Set.fromList [Map.fromList newTy])
-
--- support short-hand field path accesses?
 processStage (Project ogM) sch =
   let m = Map.delete "_id" ogM
    in do
@@ -135,7 +149,10 @@ processStage (Project ogM) sch =
           ( \acc (k, v) -> do
               case m Map.!? k of
                 Nothing -> do
-                  ty <- withContext (typeOfExpression baseSch v) (PP.text ("Inserting expression " ++ oneLine v ++ " at " ++ show k))
+                  ty <-
+                    withContext
+                      (typeOfExpression baseSch v)
+                      (PP.text ("Inserting expression " ++ oneLine v ++ " at " ++ show k))
                   return $ Map.insert k ty acc
                 Just ogTy ->
                   case v of
@@ -145,7 +162,10 @@ processStage (Project ogM) sch =
                       res <- processInclusions nxtProjExp ogTy baseSch
                       return $ Map.insert k res acc
                     exp -> do
-                      ty <- withContext (typeOfExpression baseSch exp) (PP.text ("Getting type of expression: " ++ oneLine exp))
+                      ty <-
+                        withContext
+                          (typeOfExpression baseSch exp)
+                          (PP.text ("Getting type of expression: " ++ oneLine exp))
                       return $ Map.insert k ty acc
           )
           Map.empty

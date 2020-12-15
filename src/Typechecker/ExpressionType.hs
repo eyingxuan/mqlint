@@ -74,7 +74,7 @@ typeOfExpression s (EObject obj) =
           (,) k <$> typeOfExpression s exp
       )
       (Map.toList obj)
-typeOfExpression _ (Inclusion i) = throwErrorWithContext "Inclusion cannot be typed"
+typeOfExpression _ (Inclusion _) = throwErrorWithContext "Inclusion cannot be typed"
 typeOfExpression s (Application op args) = do
   argsT <- mapM (typeOfExpression s) args
   typeOfOp op argsT

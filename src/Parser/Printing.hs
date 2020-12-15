@@ -138,7 +138,6 @@ singleO k v = ppo $ Map.singleton k v
 
 instance PP Stage where
   pp (Match exp) = singleO "$match" (EObject (Map.singleton "$expr" exp))
-  -- pp (Match exp) singleO "$match" (EObject (Map.singleton "$expr" exp))
   pp (Unwind fp) = singleO "$unwind" (Lit (Str (renderOneLine (withDollar fp))))
   pp (Lookup from lf ff as) =
     singleO

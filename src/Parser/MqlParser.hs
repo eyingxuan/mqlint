@@ -99,7 +99,7 @@ accumulatorOf a = case a of
 
 getAccumulation :: (String, JSON) -> TransformResult (String, (Accumulator, Expression))
 getAccumulation (k, JObject o) = case Map.toList o of
-  [(acc, exp)] -> (,) <$> pure k <*> ((,) <$> accumulatorOf acc <*> makeExpression exp)
+  [(acc, exp)] -> (,) k <$> ((,) <$> accumulatorOf acc <*> makeExpression exp)
   _ -> throwErrorWithContext "Exactly one accumulator per field."
 getAccumulation _ = throwErrorWithContext "Accumulator inside $group must be an object."
 
