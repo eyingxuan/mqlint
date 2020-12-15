@@ -38,7 +38,7 @@ genConstField :: Gen String
 genConstField = do
   s <- genField
   -- exclude keywords
-  if s `elem` ["string", "boolean", "number", "date", "id"] then genConstField else return s
+  if s `elem` ["string", "boolean", "number", "date", "id", "sum", "array"] then genConstField else return s
 
 genBSONType :: Int -> Gen BSONType
 genBSONType 0 = oneof $ pure <$> rootTypes
@@ -52,7 +52,7 @@ genBSONType n =
            ]
     )
   where
-    n' = n `div` 2
+    n' = n `div` 5
 
 instance Arbitrary Op where
   arbitrary =
