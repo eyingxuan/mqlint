@@ -1,0 +1,10 @@
+[
+  {
+    "$project": {
+      "firstName": 1,
+      "isCool": {
+        "$cond": [{ "$eq": ["$lastName", "XYZ"] }, "yes", { "$literal": 0 }]
+      }
+    }
+  }
+]
