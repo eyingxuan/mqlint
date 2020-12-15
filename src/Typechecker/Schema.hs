@@ -4,8 +4,9 @@ import Control.Monad (foldM)
 import Data.Map.Internal (delete, empty, insert, member, (!?))
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint as PP
+import Typechecker.TypecheckerUtils (fromBsonType, toBsonType)
 import Types (BSONType (..), FieldPath, Index (..), SchemaTy (..), TypecheckResult)
-import Utils (addLintError, fromBsonType, throwErrorWithContext, toBsonType, withErr)
+import Utils (addLintError, throwErrorWithContext, withErr)
 
 updateSchemaTy :: FieldPath -> (BSONType -> TypecheckResult BSONType) -> SchemaTy -> TypecheckResult SchemaTy
 updateSchemaTy fp trans sch = do

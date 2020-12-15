@@ -6,8 +6,9 @@ import qualified Data.Set as Set
 import Parser.Printing (PP (..), oneLine)
 import qualified Text.PrettyPrint as PP
 import Typechecker.Schema (accessPossibleTys)
+import Typechecker.TypecheckerUtils (flattenBSONType, isSubtype)
 import Types (BSON (..), BSONType (..), Contextual (..), Expression (..), Op (..), SchemaTy (..), TypecheckResult)
-import Utils (addLintError, flattenBSONType, isSubtype, throwErrorWithContext)
+import Utils (addLintError, throwErrorWithContext)
 
 sumT :: [BSONType] -> BSONType
 sumT = TSum . Set.fromList

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2fce20fc7779e2fa8c166291456b7b536f2a295591b6015f8f3f1b653f25d23e
+-- hash: f36fb4bd4cbed6227bde20886467d074152f1f56166aec2004ccec35a575c32f
 
 name:           mongo-linter
 version:        0.1.0.0
@@ -29,6 +29,7 @@ library
       Typechecker.ExpressionType
       Typechecker.Schema
       Typechecker.Typechecker
+      Typechecker.TypecheckerUtils
       Types
       Utils
   other-modules:

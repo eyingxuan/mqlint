@@ -12,6 +12,7 @@ import Parser.Printing (oneLine)
 import qualified Text.PrettyPrint as PP
 import Typechecker.ExpressionType (typeOfExpression)
 import Typechecker.Schema (accessPossibleTys, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
+import Typechecker.TypecheckerUtils (flattenBSONType, flattenSchemaTy, fromBsonType, isSubtype, toBsonType)
 import Types
   ( AST (..),
     Accumulator (..),
@@ -26,7 +27,7 @@ import Types
     Stage (..),
     TypecheckResult,
   )
-import Utils (flattenBSONType, flattenSchemaTy, fromBsonType, isSubtype, throwErrorWithContext, toBsonType, withErr)
+import Utils (throwErrorWithContext, withErr)
 
 runTypechecker :: AST -> SchemaTy -> Map.Map String SchemaTy -> Either String (SchemaTy, [String])
 runTypechecker p sch db = do
