@@ -19,26 +19,24 @@ typeOf s = TConst s
 typeOfProperty :: JSON -> TransformResult BSONType
 typeOfProperty j@(JObject o) = do
   tval <- getStringValue "type" o
-  if tval == "object"
-    then do
+  case tval of
+    "object" -> do
       props <- fromProperties j
       return $ TObject props
-    else
-      if tval == "array"
-        then do
-          itemObj <- getValue "items" o
-          itemT <- typeOfProperty itemObj
-          return $ TArray itemT
-        else
-          if tval == "sum"
-            then do
-              typesObj <- getValue "types" o
-              case typesObj of
-                JArray ts ->
-                  let types = mapM typeOfProperty ts
-                   in TSum . Set.fromList <$> types
-                _ -> throwErrorWithContext "sum types must be presented in an array."
-            else return $ typeOf tval
+    "array" ->
+      do
+        itemObj <- getValue "items" o
+        itemT <- typeOfProperty itemObj
+        return $ TArray itemT
+    "sum" ->
+      do
+        typesObj <- getValue "types" o
+        case typesObj of
+          JArray ts ->
+            let types = mapM typeOfProperty ts
+             in TSum . Set.fromList <$> types
+          _ -> throwErrorWithContext "sum types must be presented in an array."
+    _ -> return $ typeOf tval
 typeOfProperty _ = throwErrorWithContext "Individual properties must be represented as objects with a `type` field"
 
 fromProperties :: JSON -> TransformResult (Map String BSONType)
