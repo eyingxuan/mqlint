@@ -1,0 +1,32 @@
+Typechecking stage: { "$facet": { "f1": [ { "$match": { "$expr": { "$eq": [ "$address.version", "v1" ] } } }, { "$project": { "address": "$address.longAddr", "facet": "facet1" } } ], "f2": [ { "$lookup": { "as": "personalInfo", "foreignField": "id", "from": "coll1", "localField": "id" } }, { "$unwind": "$personalInfo" }, { "$project": { "facet": "facet2", "pets": "$personalInfo.pets" } } ] } }
+  Typechecking field f1 with pipeline [ { "$match": { "$expr": { "$eq": [ "$address.version", "v1" ] } } }, { "$project": { "address": "$address.longAddr", "facet": "facet1" } } ]
+    Typechecking stage: { "$match": { "$expr": { "$eq": [ "$address.version", "v1" ] } } }
+      Accessing field path "$address.version" of schema 
+      {
+       "type": "object",
+       "properties": {
+                      "firstName": { "type": "string" },
+                      "id": { "type": "string" },
+                      "lastName": { "type": "string" },
+                      "pets": {
+                               "type": "array",
+                               "items": {
+                                         "type": "sum",
+                                         "types": [
+                                                   {
+                                                    "type": "object",
+                                                    "properties": { "id": { "type": "number" } }
+                                                   },
+                                                   {
+                                                    "type": "object",
+                                                    "properties": { "id": { "type": "string" } }
+                                                   }
+                                                  ]
+                                        }
+                              },
+                      "stuff": {
+                                "type": "array",
+                                "items": { "type": "string" }
+                               }
+                     }
+      } Field name not found in object

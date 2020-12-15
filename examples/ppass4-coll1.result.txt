@@ -1,1 +1,9 @@
-Right (S (fromList [fromList [("bankAcc",TNumber),("id",TStr)]]),[])
+{
+ "type": "object",
+ "properties": {
+                "bankAcc": { "type": "number" },
+                "id": { "type": "string" }
+               }
+}
+---
+Warnings:

@@ -1,1 +1,36 @@
-Right (S (fromList [fromList [("f1",TObject (fromList [("address",TStr),("facet",TStr)])),("f2",TObject (fromList [("facet",TStr),("pets",TArray (TSum (fromList [TObject (fromList [("id",TNumber)]),TObject (fromList [("id",TStr)])])))]))]]),[])
+{
+ "type": "object",
+ "properties": {
+                "f1": {
+                       "type": "object",
+                       "properties": {
+                                      "address": { "type": "string" },
+                                      "facet": { "type": "string" }
+                                     }
+                      },
+                "f2": {
+                       "type": "object",
+                       "properties": {
+                                      "facet": { "type": "string" },
+                                      "pets": {
+                                               "type": "array",
+                                               "items": {
+                                                         "type": "sum",
+                                                         "types": [
+                                                                   {
+                                                                    "type": "object",
+                                                                    "properties": { "id": { "type": "number" } }
+                                                                   },
+                                                                   {
+                                                                    "type": "object",
+                                                                    "properties": { "id": { "type": "string" } }
+                                                                   }
+                                                                  ]
+                                                        }
+                                              }
+                                     }
+                      }
+               }
+}
+---
+Warnings:

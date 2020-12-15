@@ -1,1 +1,9 @@
-Right (S (fromList [fromList [("firstName",TStr),("zip",TNumber)]]),[])
+{
+ "type": "object",
+ "properties": {
+                "firstName": { "type": "string" },
+                "zip": { "type": "number" }
+               }
+}
+---
+Warnings:

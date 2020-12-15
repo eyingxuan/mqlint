@@ -1,1 +1,12 @@
-Right (S (fromList [fromList [("_id",TObject (fromList [("id",TStr)])),("avg",TNumber)]]),[])
+{
+ "type": "object",
+ "properties": {
+                "_id": {
+                        "type": "object",
+                        "properties": { "id": { "type": "string" } }
+                       },
+                "avg": { "type": "number" }
+               }
+}
+---
+Warnings:

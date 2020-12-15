@@ -5,10 +5,12 @@ import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.Map as Map
 import Parser.MqlParser (getPipelineFromFile)
 import Parser.ParserCommon (runTransformResult)
+import Parser.Printing (PP (..))
 import Parser.SchemaParser (getContextFromFile)
 import System.FilePath (replaceExtension, takeBaseName)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Golden (findByExtension, goldenVsString)
+import qualified Text.PrettyPrint as PP
 import Typechecker.Typechecker (runTypechecker)
 
 goldenTests :: IO ()
@@ -26,7 +28,10 @@ execute schemaFile pipelineFile = do
    in case (runTransformResult ctx, runTransformResult pipe) of
         (Right context, Right pipeline) ->
           case Map.lookup colName context of
-            Just schema -> return $ C.pack $ show (runTypechecker pipeline schema context)
+            -- Just schema -> return $ C.pack $ show (runTypechecker pipeline schema context)
+            Just schema -> case runTypechecker pipeline schema context of
+              Left err -> return $ C.pack err
+              Right (ty, warnings) -> return $ C.pack (PP.render (pp ty) ++ "\n---\nWarnings:\n" ++ concat warnings)
             Nothing -> return $ C.pack "Collection not found"
         (Left cerror, Left perror) -> return $ C.pack $ show cerror ++ "\n---\n" ++ show perror
         (Left cerror, _) -> return $ C.pack $ show cerror

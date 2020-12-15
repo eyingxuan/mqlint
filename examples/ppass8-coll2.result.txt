@@ -1,1 +1,38 @@
-Right (S (fromList [fromList [("address",TSum (fromList [TObject (fromList [("addr",TStr),("version",TConst "v2"),("zip",TNumber)]),TObject (fromList [("longAddr",TStr),("version",TConst "v1")])])),("id",TStr)]]),["Typechecking stage: { \"$match\": { \"$expr\": { \"$eq\": [ \"$address\", { \"hello\": \"world\" } ] } } }\n  Equality must check between identical types: { \"type\": \"sum\", \"types\": [ { \"type\": \"object\", \"properties\": { \"addr\": { \"type\": \"string\" }, \"version\": { \"type\": \"v2\" }, \"zip\": { \"type\": \"number\" } } }, { \"type\": \"object\", \"properties\": { \"longAddr\": { \"type\": \"string\" }, \"version\": { \"type\": \"v1\" } } } ] }, { \"type\": \"object\", \"properties\": { \"hello\": { \"type\": \"string\" } } }"])
+{
+ "type": "object",
+ "properties": {
+                "address": {
+                            "type": "sum",
+                            "types": [
+                                      {
+                                       "type": "object",
+                                       "properties": {
+                                                      "addr": { "type": "string" },
+                                                      "sample": {
+                                                                 "type": "array",
+                                                                 "items": { "type": "number" }
+                                                                },
+                                                      "version": { "type": "v2" },
+                                                      "zip": { "type": "number" }
+                                                     }
+                                      },
+                                      {
+                                       "type": "object",
+                                       "properties": {
+                                                      "longAddr": { "type": "string" },
+                                                      "sample": {
+                                                                 "type": "array",
+                                                                 "items": { "type": "string" }
+                                                                },
+                                                      "version": { "type": "v1" }
+                                                     }
+                                      }
+                                     ]
+                           },
+                "id": { "type": "string" }
+               }
+}
+---
+Warnings:
+Typechecking stage: { "$match": { "$expr": { "$eq": [ "$address", { "hello": "world" } ] } } }
+  Equality must check between identical types: { "type": "sum", "types": [ { "type": "object", "properties": { "addr": { "type": "string" }, "sample": { "type": "array", "items": { "type": "number" } }, "version": { "type": "v2" }, "zip": { "type": "number" } } }, { "type": "object", "properties": { "longAddr": { "type": "string" }, "sample": { "type": "array", "items": { "type": "string" } }, "version": { "type": "v1" } } } ] }, { "type": "object", "properties": { "hello": { "type": "string" } } }

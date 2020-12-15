@@ -42,7 +42,8 @@
               "type": "object",
               "properties": {
                 "version": { "type": "v1" },
-                "longAddr": { "type": "string" }
+                "longAddr": { "type": "string" },
+                "sample": { "type": "array", "items": { "type": "string" } }
               }
             },
             {
@@ -50,7 +51,8 @@
               "properties": {
                 "version": { "type": "v2" },
                 "addr": { "type": "string" },
-                "zip": { "type": "number" }
+                "zip": { "type": "number" },
+                "sample": { "type": "array", "items": { "type": "number" } }
               }
             }
           ]

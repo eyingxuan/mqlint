@@ -1,1 +1,20 @@
-Right (S (fromList [fromList [("address",TObject (fromList [("addr",TStr),("version",TConst "v2"),("zip",TNumber)])),("id",TStr)]]),[])
+{
+ "type": "object",
+ "properties": {
+                "address": {
+                            "type": "object",
+                            "properties": {
+                                           "addr": { "type": "string" },
+                                           "sample": {
+                                                      "type": "array",
+                                                      "items": { "type": "number" }
+                                                     },
+                                           "version": { "type": "v2" },
+                                           "zip": { "type": "number" }
+                                          }
+                           },
+                "id": { "type": "string" }
+               }
+}
+---
+Warnings:

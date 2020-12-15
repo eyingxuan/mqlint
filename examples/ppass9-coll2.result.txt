@@ -8,10 +8,7 @@
                                        "type": "object",
                                        "properties": {
                                                       "addr": { "type": "string" },
-                                                      "sample": {
-                                                                 "type": "array",
-                                                                 "items": { "type": "number" }
-                                                                },
+                                                      "sample": { "type": "number" },
                                                       "version": { "type": "v2" },
                                                       "zip": { "type": "number" }
                                                      }
@@ -19,10 +16,8 @@
                                       {
                                        "type": "object",
                                        "properties": {
-                                                      "sample": {
-                                                                 "type": "array",
-                                                                 "items": { "type": "string" }
-                                                                },
+                                                      "longAddr": { "type": "string" },
+                                                      "sample": { "type": "string" },
                                                       "version": { "type": "v1" }
                                                      }
                                       }
@@ -33,6 +28,3 @@
 }
 ---
 Warnings:
-Typechecking stage: { "$project": { "address": { "longAddr": 0 } } }
-  Removing field path "$address.longAddr"
-    Index longAddr does not exist.
