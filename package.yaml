@@ -24,6 +24,7 @@ dependencies:
   - parsec
   - mtl
   - pretty
+  - dlist
 
 library:
   source-dirs: src

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 28ff4a75361f4f5041d80a4e8a8f25b705923d4db47cfb56bffc26d96d2a11bc
+-- hash: 2fce20fc7779e2fa8c166291456b7b536f2a295591b6015f8f3f1b653f25d23e
 
 name:           mongo-linter
 version:        0.1.0.0
@@ -40,6 +40,7 @@ library
       HUnit
     , base >=4.7 && <5
     , containers
+    , dlist
     , mtl
     , parsec
     , pretty
@@ -56,6 +57,7 @@ executable mongo-linter-exe
       HUnit
     , base >=4.7 && <5
     , containers
+    , dlist
     , mongo-linter
     , mtl
     , parsec
@@ -80,6 +82,7 @@ test-suite mongo-linter-test
     , base >=4.7 && <5
     , bytestring
     , containers
+    , dlist
     , filepath
     , mongo-linter
     , mtl

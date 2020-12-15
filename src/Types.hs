@@ -24,6 +24,7 @@ import Control.Monad.Identity (Identity)
 import Control.Monad.Reader (ReaderT, ask, withReaderT)
 import Control.Monad.Writer (WriterT)
 import Data.Bifunctor (second)
+import Data.DList (DList)
 import Data.Map.Internal (Map)
 import Data.Set (Set)
 import Text.PrettyPrint (Doc, nest, ($+$))
@@ -32,7 +33,7 @@ type TypecheckTrace = Doc -> Doc
 
 type Context = Map String SchemaTy
 
-type Exception = WriterT [String] (ExceptT String Identity)
+type Exception = WriterT (DList String) (ExceptT String Identity)
 
 type TypecheckResult = ReaderT (Context, TypecheckTrace) Exception
 

@@ -5,6 +5,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Identity (runIdentity)
 import Control.Monad.Reader (MonadReader (ask), runReaderT)
 import Control.Monad.Writer (runWriterT)
+import qualified Data.DList as DL
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Parser.Printing (oneLine)
@@ -28,8 +29,9 @@ import Types
 import Utils (flattenBSONType, flattenSchemaTy, fromBsonType, isSubtype, throwErrorWithContext, toBsonType, withErr)
 
 runTypechecker :: AST -> SchemaTy -> Map.Map String SchemaTy -> Either String (SchemaTy, [String])
-runTypechecker p sch db =
-  runIdentity (runExceptT (runWriterT (runReaderT (typecheck p sch) (db, id))))
+runTypechecker p sch db = do
+  (ty, warnings) <- runIdentity (runExceptT (runWriterT (runReaderT (typecheck p sch) (db, id))))
+  return (ty, DL.toList warnings)
 
 -- Throws an error if mixture of exclusion with other expressions
 isAllExclusion :: Expression -> TypecheckResult Bool

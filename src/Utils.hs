@@ -15,6 +15,7 @@ where
 import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.Reader (MonadReader (ask))
 import Control.Monad.Writer (MonadWriter (tell))
+import Data.DList (singleton)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Text.PrettyPrint (Doc, render, text)
@@ -49,7 +50,7 @@ throwErrorWithContext s = do
 addLintError :: Doc -> TypecheckResult ()
 addLintError warning = do
   (_, d) <- ask
-  tell [PP.render $ d warning]
+  tell $ singleton (PP.render $ d warning)
 
 isEmptySumType :: BSONType -> Bool
 isEmptySumType (TSum x) = Set.size x == 0
