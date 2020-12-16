@@ -5,8 +5,10 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Parser.JsonParser (parseJson)
 import Parser.ParserCommon (JSON (..), TransformResult, getStringValue, getValue)
-import Types (BSONType (..), Context, SchemaTy (..))
+import Types (BSONType (..), Context, SchemaTy (..), Contextual (..) )
 import Utils (throwErrorWithContext)
+import qualified Text.PrettyPrint as PP
+import Text.Printf (printf)
 
 typeOf :: String -> BSONType
 typeOf "string" = TStr
@@ -26,7 +28,7 @@ typeOfProperty j@(JObject o) = do
     "array" ->
       do
         itemObj <- getValue "items" o
-        itemT <- typeOfProperty itemObj
+        itemT <- withContext (typeOfProperty itemObj) (PP.text "Getting inner type of array")
         return $ TArray itemT
     "sum" ->
       do
@@ -39,11 +41,15 @@ typeOfProperty j@(JObject o) = do
     _ -> return $ typeOf tval
 typeOfProperty _ = throwErrorWithContext "Individual properties must be represented as objects with a `type` field"
 
+mapMWithKeyInContext :: (Monad m, Contextual m) => String -> (b -> m a) -> Map String b -> m (Map String a)
+mapMWithKeyInContext msg f = sequence . Map.mapWithKey (\k v -> withContext (f v) (PP.text (printf msg k)))
+
 fromProperties :: JSON -> TransformResult (Map String BSONType)
 fromProperties (JObject o) = do
   v <- getValue "properties" o
   case v of
-    JObject p -> mapM typeOfProperty p
+    -- JObject p -> mapM typeOfProperty p
+    JObject p -> mapMWithKeyInContext "Property with key %s" typeOfProperty p
     _ -> throwErrorWithContext "Properties must be an object."
 fromProperties _ = throwErrorWithContext "Properties must be objects."
 

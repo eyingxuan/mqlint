@@ -39,11 +39,11 @@ getStringValue k m = do
   val <- getValue k m
   case val of
     JStr s -> return s
-    _ -> throwErrorWithContext ("could not parse string value " ++ k)
+    _ -> throwErrorWithContext ("Object property '" ++ k ++ "' is not a string.")
 
 getValue :: String -> Map String JSON -> TransformResult JSON
-getValue k m = withContext helper (PP.text ("Retrieving value of key " ++ k ++ " from object..."))
+getValue k m = helper
   where
     helper = case Map.lookup k m of
       Just v -> return v
-      Nothing -> throwErrorWithContext ("Could not find key in stage: " ++ k)
+      Nothing -> throwErrorWithContext ("Could not find key in object: '" ++ k ++ "'")

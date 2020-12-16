@@ -6,7 +6,7 @@ import Lib (PP (..), getContextFromFile, getPipelineFromFile, runTransformResult
 import System.Environment (getArgs)
 import Text.Printf(printf)
 
-errmsg = putStrLn "Error found!"
+printFlashy s = putStrLn ("***" ++ s ++ "***\n")
 
 main :: IO ()
 main = do
@@ -20,14 +20,20 @@ main = do
           case Map.lookup collectionName context of
             Just schema -> case runTypechecker pipeline schema context of
               Left error -> do
-                putStrLn "Error found!"
+                putStrLn "Typechecking failed:"
                 putStrLn error
               Right (resSchema, warnings) -> do
                 print (pp resSchema)
                 putStrLn "\n---\nWarnings:\n"
                 forM_ warnings putStrLn
             Nothing -> printf "Given collection name '%s' not found in schema file." collectionName
-        (Left cerror, Left perror) -> putStrLn "Errors found! Schema: \n" >> putStrLn (cerror ++ "\n---\nPipeline:\n" ++ perror)
-        (Left cerror, _) -> errmsg >> putStrLn cerror
-        (_, Left perror) -> errmsg >> putStrLn perror
+        (Left cerror, Left perror) -> do
+          printFlashy "Parsing errors" 
+          putStrLn "in schema:" 
+          putStrLn cerror
+          putStrLn "---\n"
+          putStrLn "in pipeline:"
+          putStrLn perror
+        (Left cerror, _) -> printFlashy "Schema parse error:" >> putStrLn cerror
+        (_, Left perror) -> printFlashy "Pipeline parse error" >> putStrLn perror
     _ -> print "Usage: ./typecheck [schema.json] [pipeline.json] [collectionName]"

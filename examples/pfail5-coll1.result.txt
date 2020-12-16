@@ -1,0 +1,1 @@
+"Stage #1 must only have one key."
