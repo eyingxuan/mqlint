@@ -20,7 +20,6 @@ extra-source-files:
 dependencies:
   - base >= 4.7 && < 5
   - containers
-  - HUnit
   - parsec
   - mtl
   - pretty
@@ -57,3 +56,4 @@ tests:
       - tasty-golden
       - filepath
       - bytestring
+      - HUnit
