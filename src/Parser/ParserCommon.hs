@@ -8,6 +8,7 @@ import Control.Monad.Reader (ReaderT, ask, runReaderT, withReaderT)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Text.PrettyPrint (Doc, nest, ($+$))
+import qualified Text.PrettyPrint as PP
 import Types (Contextual (..))
 import Utils (throwErrorWithContext)
 
@@ -41,6 +42,8 @@ getStringValue k m = do
     _ -> throwErrorWithContext ("could not parse string value " ++ k)
 
 getValue :: String -> Map String JSON -> TransformResult JSON
-getValue k m = case Map.lookup k m of
-  Just v -> return v
-  Nothing -> throwErrorWithContext ("Could not find key in stage: " ++ k)
+getValue k m = withContext helper (PP.text ("Retrieving value of key " ++ k ++ " from object..."))
+  where
+    helper = case Map.lookup k m of
+      Just v -> return v
+      Nothing -> throwErrorWithContext ("Could not find key in stage: " ++ k)
