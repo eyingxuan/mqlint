@@ -1,1 +1,2 @@
-"Parsing stage #1: $lookup.\n  Could not find key in object: 'localField'"
+Parsing stage #1: $lookup.
+  Could not find key in object: 'localField'

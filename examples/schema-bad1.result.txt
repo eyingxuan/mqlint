@@ -1,1 +1,1 @@
-"Pipeline must be array of stages."
+Pipeline must be array of stages.

@@ -33,9 +33,9 @@ execute schemaFile pipelineFile = do
               Left err -> return $ C.pack err
               Right (ty, warnings) -> return $ C.pack (PP.render (pp ty) ++ "\n---\nWarnings:\n" ++ concat warnings)
             Nothing -> return $ C.pack "Collection not found"
-        (Left cerror, Left perror) -> return $ C.pack $ show cerror ++ "\n---\n" ++ show perror
-        (Left cerror, _) -> return $ C.pack $ show cerror
-        (_, Left perror) -> return $ C.pack $ show perror
+        (Left cerror, Left perror) -> return $ C.pack $ cerror ++ "\n---\n" ++ perror
+        (Left cerror, _) -> return $ C.pack cerror
+        (_, Left perror) -> return $ C.pack perror
 
 tests :: IO TestTree
 tests = do
@@ -49,5 +49,6 @@ tests = do
           (execute "./examples/schema.json" pipelineFile)
         | pipelineFile <- pipelines,
           takeBaseName pipelineFile /= "schema",
+          
           let resultFile = replaceExtension pipelineFile ".result.txt"
       ]
