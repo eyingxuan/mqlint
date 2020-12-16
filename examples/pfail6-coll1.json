@@ -1,0 +1,8 @@
+[
+  {
+    "$lookup": {
+      "from": "coll2",
+      "as": "field"
+    }
+  }
+]

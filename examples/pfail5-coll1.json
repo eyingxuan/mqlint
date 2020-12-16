@@ -1,0 +1,6 @@
+[
+  {
+    "$unwind": "$field",
+    "$project": {"_id": 0}
+  }
+]

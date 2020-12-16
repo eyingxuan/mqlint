@@ -4,6 +4,9 @@ import Control.Monad (forM_)
 import qualified Data.Map as Map
 import Lib (PP (..), getContextFromFile, getPipelineFromFile, runTransformResult, runTypechecker)
 import System.Environment (getArgs)
+import Text.Printf(printf)
+
+errmsg = putStrLn "Error found!"
 
 main :: IO ()
 main = do
@@ -23,8 +26,8 @@ main = do
                 print (pp resSchema)
                 putStrLn "\n---\nWarnings:\n"
                 forM_ warnings putStrLn
-            Nothing -> print (show context ++ "\n---\n" ++ show pipeline)
-        (Left cerror, Left perror) -> print (cerror ++ "\n---\n" ++ perror)
-        (Left cerror, _) -> print cerror
-        (_, Left perror) -> print perror
-    _ -> print "pass in a schema file please!"
+            Nothing -> printf "Given collection name '%s' not found in schema file." collectionName
+        (Left cerror, Left perror) -> putStrLn "Errors found! Schema: \n" >> putStrLn (cerror ++ "\n---\nPipeline:\n" ++ perror)
+        (Left cerror, _) -> errmsg >> putStrLn cerror
+        (_, Left perror) -> errmsg >> putStrLn perror
+    _ -> print "Usage: ./typecheck [schema.json] [pipeline.json] [collectionName]"
