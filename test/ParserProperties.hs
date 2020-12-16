@@ -90,17 +90,6 @@ instance Arbitrary Index where
         ObjectIndex <$> genField
       ]
 
-genBSON :: Int -> Gen BSON
-genBSON 0 = oneof [Number <$> arbitrary, Str <$> genField, pure Null, Boolean <$> arbitrary]
-genBSON n =
-  frequency
-    [ (3, genBSON 0),
-      (n, Object . Map.fromList <$> (zip <$> listOf genField <*> listOf (genBSON n'))),
-      (n, Array <$> vectorOf n' (genBSON n'))
-    ]
-  where
-    n' = n `div` 5
-
 genExp :: Int -> Gen Expression
 genExp 0 = oneof [FP <$> genFP, Inclusion <$> arbitrary]
 genExp n =
@@ -124,15 +113,6 @@ genExp n =
     ]
   where
     n' = n `div` 10
-
-
-  -- shrink (TObject m) = do
-  --   (ks, vs) <- Map.toList m
-  --   vs <- shrink vs
-  --   ks <- shrink ks
-  --   case vs of
-  --     TObject m' -> TObject . uncurry Map.singleton <$> Map.toList m'
-  --     _ -> return $ TObject $ Map.singleton ks vs
 
 instance Arbitrary Expression where
   arbitrary = genExp 2
@@ -175,7 +155,7 @@ instance Arbitrary Stage where
       ]
   shrink (Match e) = Match <$> shrink e
   shrink (Unwind fp) = if length fp > 1 then Unwind . singleton <$> fp else [Unwind fp]
-  shrink t@(Lookup f1 fp1 fp2 f2) = [t]
+  shrink t@Lookup {} = [t]
   shrink (Group idexp s) = do
     id' <- shrink idexp
     (k, v) <- Map.toList s
@@ -201,7 +181,6 @@ shrinkMap m = do
   vs <- shrink v
   ks <- shrink k
   return $ Map.singleton ks vs
-
 
 instance Arbitrary BSONType where
   arbitrary = undefined
@@ -233,7 +212,6 @@ instance Arbitrary AST where
       Facet m -> snd <$> Map.toList m
       _ -> if length stages > 1 then Pipeline . shrink <$> stages else []
 
-    
 singleton :: a -> [a]
 singleton = (: [])
 

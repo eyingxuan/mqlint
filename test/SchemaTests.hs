@@ -1,15 +1,14 @@
 module SchemaTests (schemaTests) where
 
-import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
-import Control.Monad.Identity (Identity, runIdentity)
-import Control.Monad.Reader (MonadReader (ask), ReaderT, lift, runReaderT)
-import Control.Monad.Writer (MonadWriter (tell), runWriterT)
+import Control.Monad.Except (MonadError (throwError), runExceptT)
+import Control.Monad.Identity (runIdentity)
+import Control.Monad.Reader (runReaderT)
+import Control.Monad.Writer (runWriterT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
-import Typechecker.Schema (accessPossibleTys, insertSchemaPath, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
 import Test.HUnit (Test (..), (~:), (~?=))
+import Typechecker.Schema (accessPossibleTys, narrowDiscUnion, removeSchemaPath, updateSchemaTy)
 import Types (BSONType (..), Index (..), SchemaTy (..), TypecheckResult)
-import Utils (withErr)
 
 runResult :: TypecheckResult a -> Either String a
 runResult r =

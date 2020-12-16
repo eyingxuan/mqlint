@@ -2,6 +2,7 @@ module GoldenTests (goldenTests) where
 
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.ByteString.Lazy.Char8 as C
+import Data.List (isPrefixOf)
 import qualified Data.Map as Map
 import Parser.MqlParser (getPipelineFromFile)
 import Parser.ParserCommon (runTransformResult)
@@ -12,7 +13,6 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Golden (findByExtension, goldenVsString)
 import qualified Text.PrettyPrint as PP
 import Typechecker.Typechecker (runTypechecker)
-import Data.List (isPrefixOf)
 
 goldenTests :: IO ()
 goldenTests = defaultMain =<< tests
@@ -29,7 +29,6 @@ execute schemaFile pipelineFile = do
    in case (runTransformResult ctx, runTransformResult pipe) of
         (Right context, Right pipeline) ->
           case Map.lookup colName context of
-            -- Just schema -> return $ C.pack $ show (runTypechecker pipeline schema context)
             Just schema -> case runTypechecker pipeline schema context of
               Left err -> return $ C.pack err
               Right (ty, warnings) -> return $ C.pack (PP.render (pp ty) ++ "\n---\nWarnings:\n" ++ concat warnings)
@@ -44,19 +43,21 @@ tests = do
   return $
     testGroup
       "Pipeline query golden tests"
-      ([ goldenVsString
-          (takeBaseName pipelineFile)
-          resultFile
-          (execute "./examples/schema.json" pipelineFile)
-        | pipelineFile <- testfiles,
-          not ("schema" `isPrefixOf` takeBaseName pipelineFile),
-          let resultFile = replaceExtension pipelineFile ".result.txt"
-      ] ++ [ goldenVsString
-              (takeBaseName schemaFile)
-              resultFile
-              (execute schemaFile "./examples/schema-empty-pipeline.json")
-        | schemaFile <- testfiles,
-          "schema-" `isPrefixOf` takeBaseName schemaFile,
-          not ("schema-empty" `isPrefixOf` takeBaseName schemaFile),
-          let resultFile = replaceExtension schemaFile ".result.txt"
-      ])
+      ( [ goldenVsString
+            (takeBaseName pipelineFile)
+            resultFile
+            (execute "./examples/schema.json" pipelineFile)
+          | pipelineFile <- testfiles,
+            not ("schema" `isPrefixOf` takeBaseName pipelineFile),
+            let resultFile = replaceExtension pipelineFile ".result.txt"
+        ]
+          ++ [ goldenVsString
+                 (takeBaseName schemaFile)
+                 resultFile
+                 (execute schemaFile "./examples/schema-empty-pipeline.json")
+               | schemaFile <- testfiles,
+                 "schema-" `isPrefixOf` takeBaseName schemaFile,
+                 not ("schema-empty" `isPrefixOf` takeBaseName schemaFile),
+                 let resultFile = replaceExtension schemaFile ".result.txt"
+             ]
+      )

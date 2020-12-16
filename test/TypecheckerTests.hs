@@ -1,13 +1,9 @@
 module TypecheckerTests (typecheckerTests) where
 
-import Control.Monad.Except (runExceptT)
-import Control.Monad.Identity (runIdentity)
-import Control.Monad.Reader (runReaderT)
-import Control.Monad.Writer (runWriterT)
 import qualified Data.Map.Internal as Map
 import qualified Data.Set as Set
 import Test.HUnit (Test (..), (~:), (~?=))
-import Typechecker.Typechecker (TypecheckResult, runTypechecker, typecheck)
+import Typechecker.Typechecker (runTypechecker)
 import Types (AST (..), BSONType (..), Expression (..), Index (..), SchemaTy (..), Stage (..))
 
 typecheckerTests :: Test
