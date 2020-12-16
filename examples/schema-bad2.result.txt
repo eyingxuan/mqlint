@@ -1,0 +1,2 @@
+Property with key firstName
+  Individual properties must be represented as objects with a `type` field

@@ -12,6 +12,7 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Golden (findByExtension, goldenVsString)
 import qualified Text.PrettyPrint as PP
 import Typechecker.Typechecker (runTypechecker)
+import Data.List (isPrefixOf)
 
 goldenTests :: IO ()
 goldenTests = defaultMain =<< tests
@@ -39,16 +40,23 @@ execute schemaFile pipelineFile = do
 
 tests :: IO TestTree
 tests = do
-  pipelines <- findByExtension [".json"] "./examples"
+  testfiles <- findByExtension [".json"] "./examples"
   return $
     testGroup
       "Pipeline query golden tests"
-      [ goldenVsString
+      ([ goldenVsString
           (takeBaseName pipelineFile)
           resultFile
           (execute "./examples/schema.json" pipelineFile)
-        | pipelineFile <- pipelines,
-          takeBaseName pipelineFile /= "schema",
-          
+        | pipelineFile <- testfiles,
+          not ("schema" `isPrefixOf` takeBaseName pipelineFile),
           let resultFile = replaceExtension pipelineFile ".result.txt"
-      ]
+      ] ++ [ goldenVsString
+              (takeBaseName schemaFile)
+              resultFile
+              (execute schemaFile "./examples/schema-empty-pipeline.json")
+        | schemaFile <- testfiles,
+          "schema-" `isPrefixOf` takeBaseName schemaFile,
+          not ("schema-empty" `isPrefixOf` takeBaseName schemaFile),
+          let resultFile = replaceExtension schemaFile ".result.txt"
+      ])

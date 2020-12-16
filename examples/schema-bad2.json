@@ -1,0 +1,13 @@
+{
+  "coll1": [
+    {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": "Davis",
+        "lastName": { "type": "string" },
+        "stuff": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  ]
+}

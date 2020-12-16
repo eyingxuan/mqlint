@@ -1,1 +1,3 @@
-Pipeline must be array of stages.
+Property with key pets
+  Getting inner type of array
+    Could not find key in object: 'properties'
