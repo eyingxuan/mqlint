@@ -125,13 +125,28 @@ genExp n =
   where
     n' = n `div` 10
 
+
+  -- shrink (TObject m) = do
+  --   (ks, vs) <- Map.toList m
+  --   vs <- shrink vs
+  --   ks <- shrink ks
+  --   case vs of
+  --     TObject m' -> TObject . uncurry Map.singleton <$> Map.toList m'
+  --     _ -> return $ TObject $ Map.singleton ks vs
+
 instance Arbitrary Expression where
   arbitrary = genExp 2
-  shrink (FP fp) = []
-  shrink (Inclusion _) = []
-  shrink (EObject m) = EObject <$> shrinkMap m
-  shrink (EArray arr) = if length arr > 1 then EArray . (: []) <$> arr else []
-  shrink (Application op arr) = if length arr > 1 then Application op . (: []) <$> arr else []
+  shrink (FP fp) = [FP fp]
+  shrink t@(Inclusion _) = [t]
+  shrink (EObject m) = do
+    (k', v') <- Map.toList m
+    ks <- shrink k'
+    vs <- shrink v'
+    case vs of
+      EObject m' -> EObject . uncurry Map.singleton <$> Map.toList m'
+      _ -> return $ EObject $ Map.singleton ks vs
+  shrink t@(EArray arr) = if length arr > 1 then EArray . (: []) <$> arr else [t]
+  shrink t@(Application op arr) = if length arr > 1 then Application op . singleton <$> arr else [t]
 
 genFP :: Gen [Index]
 genFP = listOf1 arbitrary
@@ -159,10 +174,13 @@ instance Arbitrary Stage where
           return $ Project (Map.fromList (zip fields exps))
       ]
   shrink (Match e) = Match <$> shrink e
-  shrink (Unwind fp) = Unwind . (: []) <$> fp
-  shrink t@(Lookup f1 fp1 fp2 f2) = []
-  shrink (Group idexp s) = []
-  shrink (Facet m) = []
+  shrink (Unwind fp) = if length fp > 1 then Unwind . singleton <$> fp else [Unwind fp]
+  shrink t@(Lookup f1 fp1 fp2 f2) = [t]
+  shrink (Group idexp s) = do
+    id' <- shrink idexp
+    (k, v) <- Map.toList s
+    return $ Group id' (Map.singleton k v)
+  shrink (Facet m) = [Facet m]
   shrink (Project m) = Project <$> shrinkMap m
 
 genAST :: Int -> Gen AST
@@ -184,10 +202,17 @@ shrinkMap m = do
   ks <- shrink k
   return $ Map.singleton ks vs
 
+
 instance Arbitrary BSONType where
   arbitrary = undefined
-  shrink (TObject m) = TObject <$> shrinkMap m
-  shrink _ = []
+  shrink (TObject m) = do
+    (ks, vs) <- Map.toList m
+    vs <- shrink vs
+    ks <- shrink ks
+    case vs of
+      TObject m' -> TObject . uncurry Map.singleton <$> Map.toList m'
+      _ -> return $ TObject $ Map.singleton ks vs
+  shrink t = [t]
 
 instance Arbitrary SchemaTy where
   arbitrary = genSchemaTy 6
@@ -202,8 +227,15 @@ instance Arbitrary SchemaTy where
 instance Arbitrary AST where
   arbitrary = genAST 5
   shrink (Pipeline stages) = do
-    shrunk_stages <- shrink <$> stages
-    fmap (Pipeline . (: [])) shrunk_stages
+    -- shrunk_stages <- shrink <$> stages
+    stage <- stages
+    case stage of
+      Facet m -> snd <$> Map.toList m
+      _ -> if length stages > 1 then Pipeline . shrink <$> stages else []
+
+    
+singleton :: a -> [a]
+singleton = (: [])
 
 prop_schema_roundtrip :: SchemaTy -> Bool
 prop_schema_roundtrip t = runTransformResult (parseSchemaTy (indented t)) == Right t
