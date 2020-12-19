@@ -1,9 +1,9 @@
-name: mongo-linter
-version: 0.1.0.0
-license: BSD3
-author: "Author name here"
-maintainer: "example@example.com"
-copyright: "2020 Author name here"
+name: mqlint
+version: 0.1.0
+license: MIT
+author: "Davis Haupt & Yingxuan Eng"
+github: "eyingxuan/mqlint"
+copyright: "2020 Davis Haupt & Yingxuan Eng"
 
 extra-source-files:
   - README.md
@@ -31,7 +31,7 @@ library:
     - -fwarn-incomplete-patterns
 
 executables:
-  mongo-linter-exe:
+  mqlint-exe:
     main: Main.hs
     source-dirs: app
     ghc-options:
@@ -39,10 +39,10 @@ executables:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - mongo-linter
+      - mqlint
 
 tests:
-  mongo-linter-test:
+  mqlint-test:
     main: Spec.hs
     source-dirs: test
     ghc-options:
@@ -50,7 +50,7 @@ tests:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - mongo-linter
+      - mqlint
       - QuickCheck
       - tasty
       - tasty-golden

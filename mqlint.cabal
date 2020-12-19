@@ -4,19 +4,25 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 856a1b9de981e4dcfd4b7c3a6072a250cdf6362c3b1e1914a7150745ab97167d
+-- hash: 0113866daeddf2159d6c0426dea63bf6981f623bbe65b5a92d102f059a4f06bf
 
-name:           mongo-linter
-version:        0.1.0.0
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2020 Author name here
-license:        BSD3
+name:           mqlint
+version:        0.1.0
+homepage:       https://github.com/eyingxuan/mqlint#readme
+bug-reports:    https://github.com/eyingxuan/mqlint/issues
+author:         Davis Haupt & Yingxuan Eng
+maintainer:     Davis Haupt & Yingxuan Eng
+copyright:      2020 Davis Haupt & Yingxuan Eng
+license:        MIT
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
     ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/eyingxuan/mqlint
 
 library
   exposed-modules:
@@ -33,7 +39,7 @@ library
       Types
       Utils
   other-modules:
-      Paths_mongo_linter
+      Paths_mqlint
   hs-source-dirs:
       src
   ghc-options: -fwarn-incomplete-patterns
@@ -46,10 +52,10 @@ library
     , pretty
   default-language: Haskell2010
 
-executable mongo-linter-exe
+executable mqlint-exe
   main-is: Main.hs
   other-modules:
-      Paths_mongo_linter
+      Paths_mqlint
   hs-source-dirs:
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
@@ -57,13 +63,13 @@ executable mongo-linter-exe
       base >=4.7 && <5
     , containers
     , dlist
-    , mongo-linter
+    , mqlint
     , mtl
     , parsec
     , pretty
   default-language: Haskell2010
 
-test-suite mongo-linter-test
+test-suite mqlint-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
@@ -71,7 +77,7 @@ test-suite mongo-linter-test
       ParserProperties
       SchemaTests
       TypecheckerTests
-      Paths_mongo_linter
+      Paths_mqlint
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
@@ -83,7 +89,7 @@ test-suite mongo-linter-test
     , containers
     , dlist
     , filepath
-    , mongo-linter
+    , mqlint
     , mtl
     , parsec
     , pretty
